@@ -1,0 +1,36 @@
+# Continuous integration.
+#
+# Runs on every pull request into main, and again on main after a merge.
+# The job compiles the project and runs the full test suite, so a pull
+# request cannot be merged on a red build and main always has a known state.
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      # Must match java.version in pom.xml, or the build fails here
+      # while passing locally.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # verify runs the tests and packages the JAR, so this step proves
+      # both that the tests pass and that the artifact Azure deploys builds.
+      - name: Build and test
+        run: mvn -B verify --file pom.xml
