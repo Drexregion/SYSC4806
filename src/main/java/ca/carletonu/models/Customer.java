@@ -7,8 +7,8 @@ import java.util.List;
 
 @Entity
 public class Customer extends Person{
-//    @ManyToMany
-//    private List<Shop> favoriteShops = new ArrayList<>();
+    @ManyToMany
+    private List<Shop> favoriteShops = new ArrayList<>();
     private String address;
     @ElementCollection
     private List<String> transactionHistory = new ArrayList<>();
@@ -20,18 +20,18 @@ public class Customer extends Person{
 
     public Customer(){}
 
-//    public List<Shop> getFavoriteShops() {
-//        return favoriteShops;
-//    }
-//    public void addShop(Shop shop)
-//    {
-//        favoriteShops.add(shop);
-//    }
-//
-//    public void removeShop(Shop shop)
-//    {
-//        favoriteShops.remove(shop);
-//    }
+    public List<Shop> getFavoriteShops() {
+        return favoriteShops;
+    }
+    public void addShop(Shop shop)
+    {
+        favoriteShops.add(shop);
+    }
+
+    public void removeShop(Shop shop)
+    {
+        favoriteShops.remove(shop);
+    }
 
     public String getAddress() {
         return address;
