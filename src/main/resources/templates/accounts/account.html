@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${person.name} + ' - Account'">Account</title>
+</head>
+<body>
+    <h1 th:text="${person.name}">Name</h1>
+
+    <p th:if="${accountMessage}" th:text="${accountMessage}"></p>
+    <p th:if="${accountError}" th:text="${accountError}"></p>
+
+    <form th:action="@{/accounts/{id}(id=${person.id})}" method="post">
+        <label>Name
+            <input name="name" required th:value="${person.name}">
+        </label>
+        <label>Email
+            <input name="email" type="email" required th:value="${person.email}">
+        </label>
+        <label>Phone
+            <input name="phone" type="tel" th:value="${person.phone}">
+        </label>
+        <!--/* Only customers have an address; showing it to sellers would invite an edit that is never saved */-->
+        <label th:if="${isCustomer}">Address
+            <input name="address" th:value="${person.address}">
+        </label>
+        <button type="submit">Save changes</button>
+    </form>
+</body>
+</html>
