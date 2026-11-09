@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Search shops</title>
+</head>
+<body>
+    <h1>Search shops</h1>
+
+    <div th:replace="~{fragments/search-form :: searchForm}"></div>
+
+    <p th:unless="${searched}">Enter a shop name or category.</p>
+
+    <th:block th:if="${searched}">
+        <th:block th:if="${#lists.isEmpty(shops)}">
+            <p th:text="|No shops match &quot;${query}&quot;.|">No shops match.</p>
+            <p><a th:href="@{/shops}">Browse all shops</a></p>
+        </th:block>
+
+        <ul th:unless="${#lists.isEmpty(shops)}">
+            <li th:each="shop : ${shops}">
+                <a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a>
+                <span th:text="${shop.type}">Category</span>
+                <p th:text="${shop.description}">Description</p>
+            </li>
+        </ul>
+    </th:block>
+</body>
+</html>
