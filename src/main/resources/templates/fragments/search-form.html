@@ -1,0 +1,6 @@
+<!--/* Shop search box. Include it on any page with:
+     <div th:replace="~{fragments/search-form :: searchForm}"></div> */-->
+<form th:fragment="searchForm" th:action="@{/shops/search}" method="get">
+    <input type="search" name="q" placeholder="Search shops by name or category" th:value="${query}">
+    <button type="submit">Search</button>
+</form>

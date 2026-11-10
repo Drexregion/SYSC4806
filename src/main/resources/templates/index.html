@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a href="#featured">Featured shops</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="container">
+            <h1>Open a shop.</h1>
+            <p class="lead">
+                Mini-Shopify lets merchants set up an online store in minutes and lets
+                customers discover shops by name or category.
+            </p>
+        </div>
+    </section>
+
+    <section class="container features">
+        <div class="feature">
+            <h2>For merchants</h2>
+            <p>Create a shop, tag it with categories, and list products with a
+                description, picture and stock count.</p>
+        </div>
+        <div class="feature">
+            <h2>For customers</h2>
+            <p>Search shops by name or category, browse their catalogue, and fill
+                a cart with whatever is in stock.</p>
+        </div>
+        <div class="feature">
+            <h2>Simulated checkout</h2>
+            <p>Purchases are simulated, but they relate with inventory: you can never
+                buy more than a shop has.</p>
+        </div>
+    </section>
+
+    <section id="featured" class="container">
+        <h2>Featured shops</h2>
+        <p class="muted" th:text="${shopCount} == 1 ? '1 shop on Mini-Shopify' : ${shopCount} + ' shops on Mini-Shopify'">
+            0 shops on Mini-Shopify
+        </p>
+
+        <p class="empty" th:if="${#lists.isEmpty(featuredShops)}">
+            No shops yet. Check back soon.
+        </p>
+
+        <ul class="shop-grid" th:unless="${#lists.isEmpty(featuredShops)}">
+            <li class="shop-card" th:each="shop : ${featuredShops}">
+                <h3><a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a></h3>
+                <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
+                <p th:text="${shop.description}">Description</p>
+                <p class="muted" th:text="${#lists.size(shop.products)} + ' products'">0 products</p>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
+</body>
+</html>
