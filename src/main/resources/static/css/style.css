@@ -135,3 +135,45 @@ a {
     font-size: 0.9rem;
     color: var(--muted);
 }
+
+.shop-card h3 a {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.shop-card h3 a:hover {
+    color: var(--accent);
+}
+
+.product-grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.product-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.product-card h3 {
+    margin: 0 0 4px;
+}
+
+.price {
+    font-weight: 600;
+    margin: 8px 0 4px;
+}
+
+.stock {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--accent);
+}
+
+.stock.out {
+    color: #a33a2a;
+}

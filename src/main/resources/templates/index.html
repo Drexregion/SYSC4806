@@ -58,7 +58,7 @@
 
         <ul class="shop-grid" th:unless="${#lists.isEmpty(featuredShops)}">
             <li class="shop-card" th:each="shop : ${featuredShops}">
-                <h3 th:text="${shop.name}">Shop name</h3>
+                <h3><a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a></h3>
                 <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
                 <p th:text="${shop.description}">Description</p>
                 <p class="muted" th:text="${#lists.size(shop.products)} + ' products'">0 products</p>
