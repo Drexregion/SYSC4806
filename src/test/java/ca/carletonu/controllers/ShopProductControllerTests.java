@@ -54,6 +54,20 @@ class ShopProductControllerTests {
         assertThat(item.getProductType()).isEqualTo("Snack");
 
         assertThat(productsOf(otherShop.getId())).isEmpty();
+
+        // The shop page the merchant is redirected to lists the new product and its inventory
+        assertThat(shopPage(shop.getId()))
+                .contains("Granola Bar")
+                .contains("40 in stock");
+    }
+
+    @Test
+    void shopPageShowsTheAddProductForm() {
+        Shop shop = shopRepository.save(new Shop("Form Check Store", "Test", "Test", null));
+
+        assertThat(shopPage(shop.getId()))
+                .contains("Add a product")
+                .contains("action=\"/shops/" + shop.getId() + "/products\"");
     }
 
     @Test
@@ -112,6 +126,15 @@ class ShopProductControllerTests {
                 .expectStatus().is3xxRedirection()
                 // Tomcat makes the redirect absolute, so match the path at the end
                 .expectHeader().valueMatches("Location", ".*/shops/" + shopId + "$");
+    }
+
+    private String shopPage(Long shopId) {
+        return client.get().uri("/shops/{id}", shopId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
     }
 
     private List<Product> productsOf(Long shopId) {

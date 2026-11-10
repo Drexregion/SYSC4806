@@ -51,6 +51,8 @@
                    th:text="|${product.duration} min service|">0 min service</p>
             </li>
         </ul>
+
+        <div th:replace="~{fragments/add-product-form :: addProductForm(${shop})}"></div>
     </section>
 </main>
 
