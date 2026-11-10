@@ -1,0 +1,137 @@
+:root {
+    --bg: #ffffff;
+    --surface: #f6f7f9;
+    --text: #1d2129;
+    --muted: #5f6673;
+    --accent: #2f6f4f;
+    --border: #e1e4e8;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+}
+
+.container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+a {
+    color: var(--accent);
+}
+
+.site-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.site-nav {
+    display: flex;
+    gap: 16px;
+}
+
+.site-nav a {
+    text-decoration: none;
+}
+
+.hero {
+    background: var(--surface);
+    padding: 48px 0;
+    margin-bottom: 32px;
+}
+
+.hero h1 {
+    margin: 0 0 12px;
+    font-size: 2rem;
+}
+
+.lead {
+    max-width: 640px;
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.feature h2 {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.empty {
+    padding: 24px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--muted);
+}
+
+.shop-grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.shop-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.shop-card h3 {
+    margin: 0 0 4px;
+}
+
+.tag {
+    display: inline-block;
+    margin: 0 0 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 0.85rem;
+}
+
+.site-footer {
+    margin-top: 48px;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: var(--muted);
+}
