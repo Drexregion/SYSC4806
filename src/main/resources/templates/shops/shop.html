@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${shop.name} - Mini-Shopify|">Shop - Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a th:href="@{/#featured}">Featured shops</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="container">
+            <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
+            <h1 th:text="${shop.name}">Shop name</h1>
+            <p class="lead" th:text="${shop.description}">Description</p>
+            <p class="muted" th:if="${shop.seller}" th:text="|Run by ${shop.seller.name}|">Run by seller</p>
+        </div>
+    </section>
+
+    <section class="container">
+        <h2>Products</h2>
+        <p class="muted" th:text="${#lists.size(products)} == 1 ? '1 product' : ${#lists.size(products)} + ' products'">
+            0 products
+        </p>
+
+        <p class="empty" th:if="${#lists.isEmpty(products)}">
+            This shop has no products yet.
+        </p>
+
+        <ul class="product-grid" th:unless="${#lists.isEmpty(products)}">
+            <li class="product-card" th:each="product : ${products}">
+                <h3 th:text="${product.name}">Product name</h3>
+                <p th:text="${product.description}">Description</p>
+                <p class="price" th:if="${product.price}"
+                   th:text="|$${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}|">$0.00</p>
+                <th:block th:if="${product instanceof T(ca.carletonu.models.Item)}">
+                    <p class="stock" th:if="${product.quantity > 0}" th:text="|${product.quantity} in stock|">0 in stock</p>
+                    <p class="stock out" th:unless="${product.quantity > 0}">Out of stock</p>
+                </th:block>
+                <p class="muted" th:if="${product instanceof T(ca.carletonu.models.Service)}"
+                   th:text="|${product.duration} min service|">0 min service</p>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
+</body>
+</html>
