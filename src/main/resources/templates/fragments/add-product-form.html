@@ -1,0 +1,25 @@
+<!--/* Add-product form. Include it on the shop page with:
+     <div th:replace="~{fragments/add-product-form :: addProductForm(${shop})}"></div>
+     productError and productForm are flash attributes set when a submit is rejected. */-->
+<section th:fragment="addProductForm(shop)">
+    <h2>Add a product</h2>
+    <p th:if="${productError}" th:text="${productError}"></p>
+    <form th:action="@{/shops/{id}/products(id=${shop.id})}" method="post">
+        <label>Name
+            <input name="name" required th:value="${productForm?.name}">
+        </label>
+        <label>Description
+            <textarea name="description" th:text="${productForm?.description}"></textarea>
+        </label>
+        <label>Price
+            <input name="price" type="number" step="0.01" min="0" required th:value="${productForm?.price}">
+        </label>
+        <label>Inventory
+            <input name="quantity" type="number" min="0" required th:value="${productForm?.quantity}">
+        </label>
+        <label>Type
+            <input name="productType" placeholder="e.g. Clothing" th:value="${productForm?.productType}">
+        </label>
+        <button type="submit">Add product</button>
+    </form>
+</section>
