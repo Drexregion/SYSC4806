@@ -64,6 +64,9 @@
                 <p class="muted" th:text="${#lists.size(shop.products)} + ' products'">0 products</p>
             </li>
         </ul>
+        <a class="button" th:href="@{/{id}/shops/new(id=${sellerId})}">
+            Create a shop
+        </a>
     </section>
 </main>
 
