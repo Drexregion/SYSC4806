@@ -39,7 +39,7 @@
 
         <ul class="product-grid" th:unless="${#lists.isEmpty(products)}">
             <li class="product-card" th:each="product : ${products}">
-                <h3 th:text="${product.name}">Product name</h3>
+                <h3><a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product name</a></h3>
                 <p th:text="${product.description}">Description</p>
                 <p class="price" th:if="${product.price}"
                    th:text="|$${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}|">$0.00</p>
