@@ -1,30 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Search shops</title>
+    <title>Search shops - Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-    <h1>Search shops</h1>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a th:href="@{/shops}">All shops</a>
+        </nav>
+    </div>
+</header>
 
-    <div th:replace="~{fragments/search-form :: searchForm}"></div>
+<main>
+    <section class="hero">
+        <div class="container">
+            <h1>Search shops</h1>
+            <p class="lead">Find a shop by its name or category.</p>
+            <div th:replace="~{fragments/search-form :: searchForm}"></div>
+        </div>
+    </section>
 
-    <p th:unless="${searched}">Enter a shop name or category.</p>
+    <section class="container">
+        <p class="empty" th:unless="${searched}">Enter a shop name or category.</p>
 
-    <th:block th:if="${searched}">
-        <th:block th:if="${#lists.isEmpty(shops)}">
-            <p th:text="|No shops match &quot;${query}&quot;.|">No shops match.</p>
-            <p><a th:href="@{/shops}">Browse all shops</a></p>
+        <th:block th:if="${searched}">
+            <th:block th:if="${#lists.isEmpty(shops)}">
+                <p class="empty" th:text="|No shops match &quot;${query}&quot;.|">No shops match.</p>
+                <p><a th:href="@{/shops}">Browse all shops</a></p>
+            </th:block>
+
+            <th:block th:unless="${#lists.isEmpty(shops)}">
+                <p class="muted"
+                   th:text="${#lists.size(shops)} == 1 ? |1 shop matches &quot;${query}&quot;| : |${#lists.size(shops)} shops match &quot;${query}&quot;|">
+                    0 shops match
+                </p>
+
+                <ul class="shop-grid">
+                    <li class="shop-card" th:each="shop : ${shops}">
+                        <h3><a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a></h3>
+                        <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
+                        <p th:text="${shop.description}">Description</p>
+                    </li>
+                </ul>
+            </th:block>
         </th:block>
+    </section>
+</main>
 
-        <ul th:unless="${#lists.isEmpty(shops)}">
-            <li th:each="shop : ${shops}">
-                <a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a>
-                <span th:text="${shop.type}">Category</span>
-                <p th:text="${shop.description}">Description</p>
-            </li>
-        </ul>
-    </th:block>
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
 </body>
 </html>

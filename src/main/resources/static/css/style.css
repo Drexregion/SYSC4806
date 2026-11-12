@@ -358,6 +358,32 @@ a {
     color: #a33a2a;
 }
 
+.hero form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+    max-width: 520px;
+}
+
+.hero input[type="search"] {
+    flex: 1 1 240px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.hero button {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #ffffff;
+    font: inherit;
+    cursor: pointer;
+}
+
 .product-card h3 a {
     color: var(--text);
     text-decoration: none;
@@ -425,4 +451,74 @@ a {
     .product-detail {
         grid-template-columns: 1fr;
     }
+}
+
+/* Add-product form on the shop page (fragments/add-product-form.html) */
+.add-product {
+    margin-top: 32px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.add-product h2 {
+    margin: 0 0 16px;
+    font-size: 1.25rem;
+}
+
+.product-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.field-wide {
+    grid-column: 1 / -1;
+}
+
+.field input,
+.field textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    font: inherit;
+    font-weight: 400;
+}
+
+.field textarea {
+    resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.button {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #ffffff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.form-error {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fbeae7;
+    color: #a33a2a;
 }
