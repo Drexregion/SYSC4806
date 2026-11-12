@@ -28,16 +28,12 @@ public class LandingController {
         this.shopRepository = shopRepository;
         this.sellerRepository = sellerRepository;
         this.seller = new Seller();
-        seller.setName("Iheanyi");
-        seller.setPassword("12345678ABC!");
-        seller.setPhone("12345678");
-        Seller savedSeller = sellerRepository.save(seller);
-        System.out.println(savedSeller.getId());
     }
 
     @GetMapping("/")
     public String landing(Model model) {
-        List<Shop> featuredShops = StreamSupport.stream(shopRepository.findAll().spliterator(), false)
+        List<Shop> featuredShops = StreamSupport.
+                stream(shopRepository.findAll().spliterator(), false)
                 .limit(FEATURED_SHOP_COUNT)
                 .toList();
         model.addAttribute("featuredShops", featuredShops);

@@ -1,5 +1,7 @@
 package ca.carletonu.controllers;
 
+import ca.carletonu.cqrs.commands.CreateShopCommand;
+import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
 import ca.carletonu.models.Seller;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
@@ -20,10 +22,10 @@ import java.util.Optional;
  */
 @Controller
 public class SellerController {
-    private ShopRepository shopRepository;
+    private CreateShopCommandHandler createShopCommandHandler;
     private SellerRepository sellerRepository;
-    public SellerController(ShopRepository shopRepository,  SellerRepository sellerRepository) {
-        this.shopRepository = shopRepository;
+    public SellerController(SellerRepository sellerRepository, CreateShopCommandHandler createShopCommandHandler) {
+        this.createShopCommandHandler = createShopCommandHandler;
         this.sellerRepository = sellerRepository;
     }
 
@@ -49,24 +51,23 @@ public class SellerController {
      * Process the shop creation form.
      */
     @PostMapping("/{id}/shops")
-    public String createShop(@PathVariable Long id,
-                             @ModelAttribute Shop shop,
-                             RedirectAttributes redirectAttributes) {
+    public String createShop(
+            @PathVariable Long id,
+            @ModelAttribute Shop shop,
+            RedirectAttributes redirectAttributes) {
 
-        Optional<Seller> seller = sellerRepository.findById(id);
+        CreateShopCommand command = new CreateShopCommand(
+                id,
+                shop.getName(),
+                shop.getDescription(),
+                shop.getType()
+        );
 
-        if (seller.isEmpty()) {
-            return "redirect:/";
-        }
-
-        // Associate the shop with its seller.
-        shop.setSeller(seller.get());
-
-        // Save the shop to the database.
-        shopRepository.save(shop);
+        createShopCommandHandler.handle(command);
 
         redirectAttributes.addFlashAttribute(
-                "successMessage", "Your shop was created successfully!"
+                "successMessage",
+                "Your shop was created successfully!"
         );
 
         return "redirect:/";

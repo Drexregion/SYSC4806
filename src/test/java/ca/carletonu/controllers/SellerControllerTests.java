@@ -1,5 +1,6 @@
 package ca.carletonu.controllers;
 
+import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
 import ca.carletonu.models.Seller;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
@@ -20,16 +21,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SellerControllerTest {
 
     private SellerRepository sellerRepository;
+    private CreateShopCommandHandler createShopCommandHandler;
     private ShopRepository shopRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         sellerRepository = mock(SellerRepository.class);
+        createShopCommandHandler = mock(CreateShopCommandHandler.class);
         shopRepository = mock(ShopRepository.class);
 
         SellerController controller =
-                new SellerController(shopRepository, sellerRepository);
+                new SellerController(sellerRepository, createShopCommandHandler);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
