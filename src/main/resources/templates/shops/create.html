@@ -30,7 +30,9 @@
 
         <div class="create-shop-card">
 
-            <form th:action="@{/{id}/shops(id=${seller.id})}"
+            <p class="form-error" th:if="${shopError}" th:text="${shopError}">Something was wrong with the form.</p>
+
+            <form th:action="@{/sellers/{id}/shops(id=${seller.id})}"
                   th:object="${shop}"
                   method="post">
 

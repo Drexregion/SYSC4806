@@ -3,34 +3,46 @@ package ca.carletonu.controllers;
 import ca.carletonu.cqrs.commands.CreateShopCommand;
 import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
 import ca.carletonu.models.Seller;
-import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
-import ca.carletonu.models.repositories.ShopRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Optional;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-class SellerControllerTest {
+/**
+ * Wiring tests for the seller controller: which view it picks, what it puts
+ * on the model, and which command it dispatches.
+ *
+ * These mock the handler deliberately, so they say nothing about whether a
+ * shop is really saved. CreateShopIntegrationTests covers that against a real
+ * database.
+ */
+class SellerControllerTests {
 
     private SellerRepository sellerRepository;
     private CreateShopCommandHandler createShopCommandHandler;
-    private ShopRepository shopRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         sellerRepository = mock(SellerRepository.class);
         createShopCommandHandler = mock(CreateShopCommandHandler.class);
-        shopRepository = mock(ShopRepository.class);
 
         SellerController controller =
                 new SellerController(sellerRepository, createShopCommandHandler);
@@ -39,15 +51,10 @@ class SellerControllerTest {
     }
 
     @Test
-    void testCreateShopForm() throws Exception {
-        // Arrange
-        Seller seller = mock(Seller.class);
+    void showsTheCreateShopForm() throws Exception {
+        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
 
-        when(sellerRepository.findById(1L))
-                .thenReturn(Optional.of(seller));
-
-        // Act and Assert
-        mockMvc.perform(get("/1/shops/new"))
+        mockMvc.perform(get("/sellers/1/shops/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("shops/create"))
                 .andExpect(model().attributeExists("seller"))
@@ -55,32 +62,22 @@ class SellerControllerTest {
     }
 
     @Test
-    void testCreateShopFormSellerNotFound() throws Exception {
-        // Arrange
-        when(sellerRepository.findById(1L))
-                .thenReturn(Optional.empty());
+    void formForAnUnknownSellerRedirectsHome() throws Exception {
+        when(sellerRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // Act and Assert
-        mockMvc.perform(get("/1/shops/new"))
+        mockMvc.perform(get("/sellers/1/shops/new"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
     }
 
     @Test
-    void testCreateShop() throws Exception {
-        // Arrange
-        CreateShopCommand command = new CreateShopCommand(
-                1L,
-                "Tech Store",
-                "Electronics and gadgets",
-                "RETAIL"
-        );
+    void submittingTheFormDispatchesTheCommandItWasGiven() throws Exception {
+        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
 
-        // Act and Assert
-        mockMvc.perform(post("/1/shops")
+        mockMvc.perform(post("/sellers/1/shops")
                         .param("name", "Tech Store")
                         .param("description", "Electronics and gadgets")
-                        .param("type", "RETAIL"))
+                        .param("type", "Retail"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"))
                 .andExpect(flash().attribute(
@@ -88,22 +85,37 @@ class SellerControllerTest {
                         "Your shop was created successfully!"
                 ));
 
-        // Verify that the command handler received the correct command.
-        verify(createShopCommandHandler).handle(command);
+        // The whole form has to reach the handler, not just the name.
+        verify(createShopCommandHandler).handle(new CreateShopCommand(
+                1L, "Tech Store", "Electronics and gadgets", "Retail"));
     }
 
     @Test
-    void testCreateShopSellerNotFound() throws Exception {
-        // Arrange
-        when(sellerRepository.findById(1L))
-                .thenReturn(Optional.empty());
+    void submittingForAnUnknownSellerDispatchesNothing() throws Exception {
+        when(sellerRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // Act and Assert
-        mockMvc.perform(post("/1/shops"))
+        mockMvc.perform(post("/sellers/1/shops")
+                        .param("name", "Tech Store")
+                        .param("type", "Retail"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
 
-        // No shop should be saved if the seller does not exist.
-        verify(shopRepository, never()).save(any(Shop.class));
+        // The controller checks the seller before building a command, so the
+        // handler is never reached and nobody sees a 500.
+        verify(createShopCommandHandler, never()).handle(any(CreateShopCommand.class));
+    }
+
+    @Test
+    void aRejectedCommandSendsTheMerchantBackToTheFormWithTheReason() throws Exception {
+        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
+        when(createShopCommandHandler.handle(any(CreateShopCommand.class)))
+                .thenThrow(new IllegalArgumentException("Shop name is required."));
+
+        mockMvc.perform(post("/sellers/1/shops")
+                        .param("name", "")
+                        .param("type", "Retail"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/sellers/1/shops/new"))
+                .andExpect(flash().attribute("shopError", "Shop name is required."));
     }
 }

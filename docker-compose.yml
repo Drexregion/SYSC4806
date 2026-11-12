@@ -21,3 +21,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
+# Start the app with --spring.profiles.active=kafka to use this broker.
+# Without that profile the app runs with no messaging at all, which is how
+# it runs on Azure.

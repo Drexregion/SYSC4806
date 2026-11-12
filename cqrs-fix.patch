@@ -1,0 +1,835 @@
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 4dce457..03d705a 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -20,4 +20,7 @@ services:
+       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+-      KAFKA_NUM_PARTITIONS: 3
+\ No newline at end of file
++      KAFKA_NUM_PARTITIONS: 3
++# Start the app with --spring.profiles.active=kafka to use this broker.
++# Without that profile the app runs with no messaging at all, which is how
++# it runs on Azure.
+diff --git a/src/main/java/ca/carletonu/controllers/LandingController.java b/src/main/java/ca/carletonu/controllers/LandingController.java
+index 82c4f5e..058c83e 100644
+--- a/src/main/java/ca/carletonu/controllers/LandingController.java
++++ b/src/main/java/ca/carletonu/controllers/LandingController.java
+@@ -22,23 +22,41 @@ public class LandingController {
+ 
+     private final ShopRepository shopRepository;
+     private final SellerRepository sellerRepository;
+-    private Seller seller;
+ 
+     public LandingController(ShopRepository shopRepository, SellerRepository sellerRepository) {
+         this.shopRepository = shopRepository;
+         this.sellerRepository = sellerRepository;
+-        this.seller = new Seller();
+     }
+ 
+     @GetMapping("/")
+     public String landing(Model model) {
+-        List<Shop> featuredShops = StreamSupport.
+-                stream(shopRepository.findAll().spliterator(), false)
++        List<Shop> featuredShops = StreamSupport
++                .stream(shopRepository.findAll().spliterator(), false)
+                 .limit(FEATURED_SHOP_COUNT)
+                 .toList();
++
+         model.addAttribute("featuredShops", featuredShops);
+         model.addAttribute("shopCount", shopRepository.count());
+-        model.addAttribute("sellerId", seller.getId());
++        model.addAttribute("sellerId", currentSellerId());
++
+         return "index";
+     }
++
++    /**
++     * Which seller the "Create a shop" link acts as.
++     *
++     * There is no sign-in yet, so the page stands in the first seller in the
++     * database. The seed data always writes one, and when the table is empty
++     * this returns null and the template leaves the link out rather than
++     * pointing it at a seller that does not exist.
++     *
++     * This goes away in Milestone 2, when the signed-in seller is the answer.
++     */
++    private Long currentSellerId() {
++        return StreamSupport
++                .stream(sellerRepository.findAll().spliterator(), false)
++                .map(Seller::getId)
++                .findFirst()
++                .orElse(null);
++    }
+ }
+diff --git a/src/main/java/ca/carletonu/controllers/SellerController.java b/src/main/java/ca/carletonu/controllers/SellerController.java
+index d51b226..bb7a47b 100644
+--- a/src/main/java/ca/carletonu/controllers/SellerController.java
++++ b/src/main/java/ca/carletonu/controllers/SellerController.java
+@@ -5,7 +5,6 @@ import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
+ import ca.carletonu.models.Seller;
+ import ca.carletonu.models.Shop;
+ import ca.carletonu.models.repositories.SellerRepository;
+-import ca.carletonu.models.repositories.ShopRepository;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.ui.Model;
+ import org.springframework.web.bind.annotation.GetMapping;
+@@ -14,25 +13,31 @@ import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+ 
+-import java.util.List;
+ import java.util.Optional;
+ 
+ /**
+- * Controller for searching shops by name or category.
++ * Lets a seller create a shop.
++ *
++ * The controller does no business logic of its own: it turns the submitted
++ * form into a command and hands it to the handler, then decides where to send
++ * the merchant next.
+  */
+ @Controller
+ public class SellerController {
+-    private CreateShopCommandHandler createShopCommandHandler;
+-    private SellerRepository sellerRepository;
+-    public SellerController(SellerRepository sellerRepository, CreateShopCommandHandler createShopCommandHandler) {
+-        this.createShopCommandHandler = createShopCommandHandler;
++
++    private final SellerRepository sellerRepository;
++    private final CreateShopCommandHandler createShopCommandHandler;
++
++    public SellerController(SellerRepository sellerRepository,
++                            CreateShopCommandHandler createShopCommandHandler) {
+         this.sellerRepository = sellerRepository;
++        this.createShopCommandHandler = createShopCommandHandler;
+     }
+ 
+     /**
+-     * Display the form for creating a shop.
++     * Shows the create-a-shop form.
+      */
+-    @GetMapping("/{id}/shops/new")
++    @GetMapping("/sellers/{id}/shops/new")
+     public String createShopForm(@PathVariable Long id, Model model) {
+ 
+         Optional<Seller> seller = sellerRepository.findById(id);
+@@ -48,13 +53,20 @@ public class SellerController {
+     }
+ 
+     /**
+-     * Process the shop creation form.
++     * Takes the submitted form, dispatches a CreateShopCommand, and redirects.
++     *
++     * Redirect after post, so refreshing the page does not create the shop a
++     * second time. A command the handler rejects sends the merchant back to
++     * the form with the reason, rather than showing an error page.
+      */
+-    @PostMapping("/{id}/shops")
+-    public String createShop(
+-            @PathVariable Long id,
+-            @ModelAttribute Shop shop,
+-            RedirectAttributes redirectAttributes) {
++    @PostMapping("/sellers/{id}/shops")
++    public String createShop(@PathVariable Long id,
++                             @ModelAttribute Shop shop,
++                             RedirectAttributes redirectAttributes) {
++
++        if (sellerRepository.findById(id).isEmpty()) {
++            return "redirect:/";
++        }
+ 
+         CreateShopCommand command = new CreateShopCommand(
+                 id,
+@@ -63,7 +75,13 @@ public class SellerController {
+                 shop.getType()
+         );
+ 
+-        createShopCommandHandler.handle(command);
++        try {
++            createShopCommandHandler.handle(command);
++        } catch (IllegalArgumentException rejected) {
++            redirectAttributes.addFlashAttribute("shopError", rejected.getMessage());
++            redirectAttributes.addFlashAttribute("shopForm", shop);
++            return "redirect:/sellers/" + id + "/shops/new";
++        }
+ 
+         redirectAttributes.addFlashAttribute(
+                 "successMessage",
+@@ -73,4 +91,3 @@ public class SellerController {
+         return "redirect:/";
+     }
+ }
+-
+diff --git a/src/main/java/ca/carletonu/cqrs/handlers/CreateShopCommandHandler.java b/src/main/java/ca/carletonu/cqrs/handlers/CreateShopCommandHandler.java
+index 7a27618..5d63eea 100644
+--- a/src/main/java/ca/carletonu/cqrs/handlers/CreateShopCommandHandler.java
++++ b/src/main/java/ca/carletonu/cqrs/handlers/CreateShopCommandHandler.java
+@@ -7,47 +7,66 @@ import ca.carletonu.models.Seller;
+ import ca.carletonu.models.Shop;
+ import ca.carletonu.models.repositories.SellerRepository;
+ import ca.carletonu.models.repositories.ShopRepository;
+-
++import org.springframework.beans.factory.ObjectProvider;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
++/**
++ * Handles the command to create a shop.
++ *
++ * This is the write side: validation and persistence live here rather than in
++ * the controller, so the rules are in one findable place.
++ */
+ @Service
+ public class CreateShopCommandHandler {
+ 
+     private final ShopRepository shopRepository;
+     private final SellerRepository sellerRepository;
+-    private final KafkaProducer kafkaProducer;
++
++    /**
++     * The producer only exists under the "kafka" profile, so this is an
++     * ObjectProvider rather than a hard dependency. Without a broker the shop
++     * is still created, the event just is not published.
++     */
++    private final ObjectProvider<KafkaProducer> kafkaProducer;
+ 
+     public CreateShopCommandHandler(
+             ShopRepository shopRepository,
+             SellerRepository sellerRepository,
+-            KafkaProducer kafkaProducer) {
++            ObjectProvider<KafkaProducer> kafkaProducer) {
+ 
+         this.shopRepository = shopRepository;
+         this.sellerRepository = sellerRepository;
+         this.kafkaProducer = kafkaProducer;
+     }
+ 
++    /**
++     * Validates the command, saves the shop, and publishes a ShopCreatedEvent
++     * when a broker is configured.
++     *
++     * @throws IllegalArgumentException if the command is not valid, or names a
++     *                                  seller that does not exist
++     */
+     @Transactional
+     public Shop handle(CreateShopCommand command) {
+ 
+-        // Retrieve the seller.
++        String error = validate(command);
++        if (error != null) {
++            throw new IllegalArgumentException(error);
++        }
++
+         Seller seller = sellerRepository.findById(command.sellerId())
+-                .orElseThrow(() ->
+-                        new IllegalArgumentException("Seller not found"));
++                .orElseThrow(() -> new IllegalArgumentException("Seller not found"));
+ 
+-        // Create the shop.
+         Shop shop = new Shop(
+-                command.name(),
+-                command.description(),
+-                command.type(),
++                command.name().trim(),
++                command.description() == null ? null : command.description().trim(),
++                command.type() == null ? null : command.type().trim(),
+                 seller
+         );
+ 
+-        // Save the shop.
+         Shop savedShop = shopRepository.save(shop);
+ 
+-        // Create an event describing the successful creation.
+         ShopCreatedEvent event = new ShopCreatedEvent(
+                 savedShop.getId(),
+                 seller.getId(),
+@@ -56,9 +75,31 @@ public class CreateShopCommandHandler {
+                 savedShop.getType()
+         );
+ 
+-        // Publish the event to Kafka.
+-        kafkaProducer.sendShopCreatedEvent(event);
++        kafkaProducer.ifAvailable(producer -> producer.sendShopCreatedEvent(event));
+ 
+         return savedShop;
+     }
+-}
+\ No newline at end of file
++
++    /**
++     * The rules a shop has to satisfy. Returns the message to show the
++     * merchant, or null when the command is fine.
++     *
++     * The form marks these fields required, but that is browser side only and
++     * a direct POST goes straight past it, so the check belongs here too.
++     */
++    private String validate(CreateShopCommand command) {
++        if (command.sellerId() == null) {
++            return "A shop needs a seller.";
++        }
++        if (command.name() == null || command.name().isBlank()) {
++            return "Shop name is required.";
++        }
++        if (command.name().trim().length() > 120) {
++            return "Shop name has to be 120 characters or fewer.";
++        }
++        if (command.type() == null || command.type().isBlank()) {
++            return "Category is required.";
++        }
++        return null;
++    }
++}
+diff --git a/src/main/java/ca/carletonu/messaging/KafkaConsumer.java b/src/main/java/ca/carletonu/messaging/KafkaConsumer.java
+index 37c393b..a4dbdad 100644
+--- a/src/main/java/ca/carletonu/messaging/KafkaConsumer.java
++++ b/src/main/java/ca/carletonu/messaging/KafkaConsumer.java
+@@ -1,20 +1,33 @@
+ package ca.carletonu.messaging;
+ 
+ import ca.carletonu.events.ShopCreatedEvent;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++import org.springframework.context.annotation.Profile;
+ import org.springframework.kafka.annotation.KafkaListener;
+ import org.springframework.stereotype.Component;
+ 
++/**
++ * Reads shop-created events off the log.
++ *
++ * For now it only logs what it receives. In Milestone 2 this is where the
++ * read models for search and browsing get updated, which is the point of
++ * splitting the write side from the read side in the first place.
++ *
++ * Only exists under the "kafka" profile, so no listener container starts
++ * when there is no broker to listen to.
++ */
+ @Component
++@Profile("kafka")
+ public class KafkaConsumer {
+-    @KafkaListener(
+-            topics = "shop-created",
+-            groupId = "mini-shopify-group"
+-    )
+-    public void consumeShopCreated(ShopCreatedEvent shopCreatedEvent) {
+-        System.out.println("Received ShopCreatedEvent!");
+ 
+-        System.out.println("Shop ID: " + shopCreatedEvent.shopId());
+-        System.out.println("Shop Name: " + shopCreatedEvent.name());
+-        System.out.println("Seller ID: " + shopCreatedEvent.sellerId());
++    private static final Logger log = LoggerFactory.getLogger(KafkaConsumer.class);
++
++    @KafkaListener(topics = "shop-created", groupId = "mini-shopify-group")
++    public void consumeShopCreated(ShopCreatedEvent shopCreatedEvent) {
++        log.info("ShopCreatedEvent received: shopId={} name={} sellerId={}",
++                shopCreatedEvent.shopId(),
++                shopCreatedEvent.name(),
++                shopCreatedEvent.sellerId());
+     }
+ }
+diff --git a/src/main/java/ca/carletonu/messaging/KafkaProducer.java b/src/main/java/ca/carletonu/messaging/KafkaProducer.java
+index 8cb9c98..60688d2 100644
+--- a/src/main/java/ca/carletonu/messaging/KafkaProducer.java
++++ b/src/main/java/ca/carletonu/messaging/KafkaProducer.java
+@@ -1,12 +1,25 @@
+ package ca.carletonu.messaging;
+ 
+ import ca.carletonu.events.ShopCreatedEvent;
++import org.springframework.context.annotation.Profile;
+ import org.springframework.kafka.core.KafkaTemplate;
+ import org.springframework.stereotype.Component;
+ 
++/**
++ * Publishes domain events to Kafka.
++ *
++ * Only exists under the "kafka" profile. Azure App Service has no broker, so
++ * the deployed application runs without this bean and the command handler
++ * simply skips publishing. Start the app with
++ * --spring.profiles.active=kafka (and the broker from docker-compose.yml)
++ * to get the event flow.
++ */
+ @Component
++@Profile("kafka")
+ public class KafkaProducer {
+-    private  static final String SHOP_CREATED_TOPIC ="shop-created";
++
++    private static final String SHOP_CREATED_TOPIC = "shop-created";
++
+     private final KafkaTemplate<String, ShopCreatedEvent> kafkaTemplate;
+ 
+     public KafkaProducer(KafkaTemplate<String, ShopCreatedEvent> kafkaTemplate) {
+diff --git a/src/main/java/ca/carletonu/messaging/KafkaTopicConfig.java b/src/main/java/ca/carletonu/messaging/KafkaTopicConfig.java
+index eb6a0cf..246001c 100644
+--- a/src/main/java/ca/carletonu/messaging/KafkaTopicConfig.java
++++ b/src/main/java/ca/carletonu/messaging/KafkaTopicConfig.java
+@@ -3,13 +3,26 @@ package ca.carletonu.messaging;
+ import org.apache.kafka.clients.admin.NewTopic;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
++import org.springframework.context.annotation.Profile;
+ import org.springframework.kafka.config.TopicBuilder;
+ 
++/**
++ * Declares the topics the application owns.
++ *
++ * Only exists under the "kafka" profile. This matters for startup: Spring's
++ * KafkaAdmin tries to create every NewTopic bean when the context comes up,
++ * so leaving this on without a broker would make the application fail to
++ * start, in CI and on Azure alike.
++ */
+ @Configuration
++@Profile("kafka")
+ public class KafkaTopicConfig {
++
+     @Bean
+     public NewTopic shopCreatedTopic() {
+         return TopicBuilder.name("shop-created")
+-                .partitions(1).replicas(1).build();
++                .partitions(1)
++                .replicas(1)
++                .build();
+     }
+ }
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index 6afa904..e9bacd6 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -1,14 +1,48 @@
+-# Kafka configuration
+-spring.kafka.bootstrap-servers=localhost:9092
++spring.application.name=mini-shopify
++
++# In-memory H2 for now. Hibernate creates the schema at startup from the
++# @Entity classes, so the data resets on every restart.
++spring.datasource.url=jdbc:h2:mem:minishopify
++spring.datasource.driverClassName=org.h2.Driver
++spring.datasource.username=sa
++spring.datasource.password=
++spring.jpa.hibernate.ddl-auto=create-drop
++
++# Prints the SQL Hibernate generates. Useful when documenting the schema
++# for the README, and when checking what the ORM does behind the scenes.
++spring.jpa.show-sql=true
++spring.jpa.properties.hibernate.format_sql=true
++
++# Browse the generated schema at http://localhost:8080/h2-console
++spring.h2.console.enabled=true
++
++# Spring Data REST publishes the repositories under /api, so the JSON
++# endpoints never collide with the Thymeleaf pages.
++spring.data.rest.base-path=/api
++
++# Track sessions by cookie only. Without this, the first redirect after a form
++# post puts ;jsessionid=... in  the URL, where it shows in the address bar and leaks when a link is shared.
++server.servlet.session.tracking-modes=cookie
++
++# Azure App Service tells the app which port to listen on through PORT.
++# Falls back to 8080 when running locally.
++server.port=${PORT:8080}
++
++# --- Kafka -------------------------------------------------------------
++# The messaging beans only exist under the "kafka" profile, so none of this
++# is read unless that profile is active. Run the broker with
++# `docker compose up -d` and start the app with
++# `--spring.profiles.active=kafka` to see the event flow end to end.
++#
++# Azure App Service has no broker, so the deployed app runs without the
++# profile: shop creation still works, it just publishes no event.
++spring.kafka.bootstrap-servers=${KAFKA_BROKERS:localhost:9092}
+ 
+-# Producer configuration
+ spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+ spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JacksonJsonSerializer
+ 
+-# Consumer configuration
+ spring.kafka.consumer.group-id=mini-shopify-group
+ spring.kafka.consumer.auto-offset-reset=earliest
+ spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+ spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+-
+-spring.kafka.consumer.properties.spring.json.trusted.packages=ca.carletonu.events
+\ No newline at end of file
++spring.kafka.consumer.properties.spring.json.trusted.packages=ca.carletonu.events
+diff --git a/src/main/resources/static/css/style.css b/src/main/resources/static/css/style.css
+index 3bc80a5..68bd27c 100644
+--- a/src/main/resources/static/css/style.css
++++ b/src/main/resources/static/css/style.css
+@@ -426,3 +426,17 @@ a {
+         grid-template-columns: 1fr;
+     }
+ }
++
++/* Validation message on the create-shop form */
++
++.form-error {
++    margin: 0 0 24px;
++    padding: 14px 18px;
++    border: 1px solid #E0B4AC;
++    border-left: 4px solid #A33A2A;
++    border-radius: 7px;
++    background: #FBF1EF;
++    color: #7A2A1E;
++    font-size: 14px;
++    font-weight: 600;
++}
+diff --git a/src/main/resources/templates/index.html b/src/main/resources/templates/index.html
+index 2ffbfd6..9505692 100644
+--- a/src/main/resources/templates/index.html
++++ b/src/main/resources/templates/index.html
+@@ -64,7 +64,7 @@
+                 <p class="muted" th:text="${#lists.size(shop.products)} + ' products'">0 products</p>
+             </li>
+         </ul>
+-        <a class="button" th:href="@{/{id}/shops/new(id=${sellerId})}">
++        <a class="button" th:if="${sellerId}" th:href="@{/sellers/{id}/shops/new(id=${sellerId})}">
+             Create a shop
+         </a>
+     </section>
+diff --git a/src/main/resources/templates/shops/create.html b/src/main/resources/templates/shops/create.html
+index 1393eb5..4a04d08 100644
+--- a/src/main/resources/templates/shops/create.html
++++ b/src/main/resources/templates/shops/create.html
+@@ -30,7 +30,9 @@
+ 
+         <div class="create-shop-card">
+ 
+-            <form th:action="@{/{id}/shops(id=${seller.id})}"
++            <p class="form-error" th:if="${shopError}" th:text="${shopError}">Something was wrong with the form.</p>
++
++            <form th:action="@{/sellers/{id}/shops(id=${seller.id})}"
+                   th:object="${shop}"
+                   method="post">
+ 
+diff --git a/src/test/java/ca/carletonu/controllers/CreateShopIntegrationTests.java b/src/test/java/ca/carletonu/controllers/CreateShopIntegrationTests.java
+new file mode 100644
+index 0000000..3a2f480
+--- /dev/null
++++ b/src/test/java/ca/carletonu/controllers/CreateShopIntegrationTests.java
+@@ -0,0 +1,157 @@
++package ca.carletonu.controllers;
++
++import ca.carletonu.models.Seller;
++import ca.carletonu.models.Shop;
++import ca.carletonu.models.repositories.SellerRepository;
++import ca.carletonu.models.repositories.ShopRepository;
++import org.junit.jupiter.api.AfterEach;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.http.MediaType;
++import org.springframework.test.web.servlet.client.RestTestClient;
++import org.springframework.util.LinkedMultiValueMap;
++import org.springframework.util.MultiValueMap;
++
++import java.util.List;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++/**
++ * Creating a shop through the form, over real HTTP against the real database.
++ *
++ * The acceptance criterion on #16 is that a shop created through the form is
++ * persisted and shows up, so that is what this checks. The application runs
++ * without the "kafka" profile here, which is also how it runs on Azure: the
++ * shop is still created, the event just is not published.
++ */
++@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
++@AutoConfigureRestTestClient
++class CreateShopIntegrationTests {
++
++    private static final String MARKER = "Zephyr Ironworks";
++
++    @Autowired
++    private RestTestClient client;
++
++    @Autowired
++    private ShopRepository shopRepository;
++
++    @Autowired
++    private SellerRepository sellerRepository;
++
++    @AfterEach
++    void removeWhatThisTestMade() {
++        shopsNamed(MARKER).forEach(shopRepository::delete);
++    }
++
++    @Test
++    void aShopCreatedThroughTheFormIsPersistedAndShowsUp() {
++        Long sellerId = aSeller();
++
++        postFormExpectingRedirect(sellerId, form(MARKER, "Hand forged tools", "Metalwork"), ".*/$");
++
++        List<Shop> created = shopsNamed(MARKER);
++        assertThat(created).singleElement().satisfies(shop -> {
++            assertThat(shop.getName()).isEqualTo(MARKER);
++            assertThat(shop.getDescription()).isEqualTo("Hand forged tools");
++            assertThat(shop.getType()).isEqualTo("Metalwork");
++            assertThat(shop.getSeller()).isNotNull();
++            assertThat(shop.getSeller().getId()).isEqualTo(sellerId);
++        });
++
++        // And it is reachable, which is the half that matters to a customer.
++        assertThat(page("/shops/" + created.getFirst().getId())).contains(MARKER);
++    }
++
++    @Test
++    void aBlankNameIsRejectedAndNothingIsSaved() {
++        Long sellerId = aSeller();
++        long before = shopRepository.count();
++
++        postFormExpectingRedirect(sellerId, form("   ", "No name at all", "Metalwork"),
++                ".*/sellers/" + sellerId + "/shops/new$");
++
++        assertThat(shopRepository.count()).isEqualTo(before);
++    }
++
++    @Test
++    void aBlankCategoryIsRejectedAndNothingIsSaved() {
++        Long sellerId = aSeller();
++        long before = shopRepository.count();
++
++        postFormExpectingRedirect(sellerId, form(MARKER, "No category", ""),
++                ".*/sellers/" + sellerId + "/shops/new$");
++
++        assertThat(shopRepository.count()).isEqualTo(before);
++    }
++
++    @Test
++    void anUnknownSellerIsSentHomeWithoutA500() {
++        long before = shopRepository.count();
++
++        postFormExpectingRedirect(Long.MAX_VALUE, form(MARKER, "No such seller", "Metalwork"), ".*/$");
++
++        assertThat(shopRepository.count()).isEqualTo(before);
++    }
++
++    @Test
++    void theFormPageRendersForARealSeller() {
++        Long sellerId = aSeller();
++
++        assertThat(page("/sellers/" + sellerId + "/shops/new"))
++                .contains("Create your shop")
++                .contains("action=\"/sellers/" + sellerId + "/shops\"");
++    }
++
++    @Test
++    void theLandingPageLinksToTheFormRatherThanToNull() {
++        aSeller();
++
++        String landing = page("/");
++
++        assertThat(landing).contains("/shops/new");
++        assertThat(landing).doesNotContain("/null/");
++    }
++
++    private Long aSeller() {
++        return sellerRepository
++                .save(new Seller("Form Tester", "form.tester@example.com", "secret", "555-0133"))
++                .getId();
++    }
++
++    private List<Shop> shopsNamed(String name) {
++        return shopRepository.findByNameContainingIgnoreCaseOrTypeContainingIgnoreCase(name, name);
++    }
++
++    private MultiValueMap<String, String> form(String name, String description, String type) {
++        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
++        form.add("name", name);
++        form.add("description", description);
++        form.add("type", type);
++        return form;
++    }
++
++    /** Submits the create-shop form and checks where it redirects to. */
++    private void postFormExpectingRedirect(Long sellerId,
++                                           MultiValueMap<String, String> form,
++                                           String locationPattern) {
++        client.post().uri("/sellers/{id}/shops", sellerId)
++                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
++                .body(form)
++                .exchange()
++                .expectStatus().is3xxRedirection()
++                // Tomcat makes the redirect absolute, so match the path at the end
++                .expectHeader().valueMatches("Location", locationPattern);
++    }
++
++    private String page(String uri) {
++        return client.get().uri(uri)
++                .exchange()
++                .expectStatus().isOk()
++                .expectBody(String.class)
++                .returnResult()
++                .getResponseBody();
++    }
++}
+diff --git a/src/test/java/ca/carletonu/controllers/SellerControllerTests.java b/src/test/java/ca/carletonu/controllers/SellerControllerTests.java
+index c9fb36b..4331cc0 100644
+--- a/src/test/java/ca/carletonu/controllers/SellerControllerTests.java
++++ b/src/test/java/ca/carletonu/controllers/SellerControllerTests.java
+@@ -3,34 +3,46 @@ package ca.carletonu.controllers;
+ import ca.carletonu.cqrs.commands.CreateShopCommand;
+ import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
+ import ca.carletonu.models.Seller;
+-import ca.carletonu.models.Shop;
+ import ca.carletonu.models.repositories.SellerRepository;
+-import ca.carletonu.models.repositories.ShopRepository;
+ 
+ import org.junit.jupiter.api.BeforeEach;
+ import org.junit.jupiter.api.Test;
+-
+ import org.springframework.test.web.servlet.MockMvc;
+ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+ 
+ import java.util.Optional;
+ 
+-import static org.mockito.Mockito.*;
+-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+-
+-class SellerControllerTest {
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
++
++/**
++ * Wiring tests for the seller controller: which view it picks, what it puts
++ * on the model, and which command it dispatches.
++ *
++ * These mock the handler deliberately, so they say nothing about whether a
++ * shop is really saved. CreateShopIntegrationTests covers that against a real
++ * database.
++ */
++class SellerControllerTests {
+ 
+     private SellerRepository sellerRepository;
+     private CreateShopCommandHandler createShopCommandHandler;
+-    private ShopRepository shopRepository;
+     private MockMvc mockMvc;
+ 
+     @BeforeEach
+     void setUp() {
+         sellerRepository = mock(SellerRepository.class);
+         createShopCommandHandler = mock(CreateShopCommandHandler.class);
+-        shopRepository = mock(ShopRepository.class);
+ 
+         SellerController controller =
+                 new SellerController(sellerRepository, createShopCommandHandler);
+@@ -39,15 +51,10 @@ class SellerControllerTest {
+     }
+ 
+     @Test
+-    void testCreateShopForm() throws Exception {
+-        // Arrange
+-        Seller seller = mock(Seller.class);
+-
+-        when(sellerRepository.findById(1L))
+-                .thenReturn(Optional.of(seller));
++    void showsTheCreateShopForm() throws Exception {
++        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
+ 
+-        // Act and Assert
+-        mockMvc.perform(get("/1/shops/new"))
++        mockMvc.perform(get("/sellers/1/shops/new"))
+                 .andExpect(status().isOk())
+                 .andExpect(view().name("shops/create"))
+                 .andExpect(model().attributeExists("seller"))
+@@ -55,32 +62,22 @@ class SellerControllerTest {
+     }
+ 
+     @Test
+-    void testCreateShopFormSellerNotFound() throws Exception {
+-        // Arrange
+-        when(sellerRepository.findById(1L))
+-                .thenReturn(Optional.empty());
++    void formForAnUnknownSellerRedirectsHome() throws Exception {
++        when(sellerRepository.findById(1L)).thenReturn(Optional.empty());
+ 
+-        // Act and Assert
+-        mockMvc.perform(get("/1/shops/new"))
++        mockMvc.perform(get("/sellers/1/shops/new"))
+                 .andExpect(status().is3xxRedirection())
+                 .andExpect(redirectedUrl("/"));
+     }
+ 
+     @Test
+-    void testCreateShop() throws Exception {
+-        // Arrange
+-        CreateShopCommand command = new CreateShopCommand(
+-                1L,
+-                "Tech Store",
+-                "Electronics and gadgets",
+-                "RETAIL"
+-        );
+-
+-        // Act and Assert
+-        mockMvc.perform(post("/1/shops")
++    void submittingTheFormDispatchesTheCommandItWasGiven() throws Exception {
++        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
++
++        mockMvc.perform(post("/sellers/1/shops")
+                         .param("name", "Tech Store")
+                         .param("description", "Electronics and gadgets")
+-                        .param("type", "RETAIL"))
++                        .param("type", "Retail"))
+                 .andExpect(status().is3xxRedirection())
+                 .andExpect(redirectedUrl("/"))
+                 .andExpect(flash().attribute(
+@@ -88,22 +85,37 @@ class SellerControllerTest {
+                         "Your shop was created successfully!"
+                 ));
+ 
+-        // Verify that the command handler received the correct command.
+-        verify(createShopCommandHandler).handle(command);
++        // The whole form has to reach the handler, not just the name.
++        verify(createShopCommandHandler).handle(new CreateShopCommand(
++                1L, "Tech Store", "Electronics and gadgets", "Retail"));
+     }
+ 
+     @Test
+-    void testCreateShopSellerNotFound() throws Exception {
+-        // Arrange
+-        when(sellerRepository.findById(1L))
+-                .thenReturn(Optional.empty());
++    void submittingForAnUnknownSellerDispatchesNothing() throws Exception {
++        when(sellerRepository.findById(1L)).thenReturn(Optional.empty());
+ 
+-        // Act and Assert
+-        mockMvc.perform(post("/1/shops"))
++        mockMvc.perform(post("/sellers/1/shops")
++                        .param("name", "Tech Store")
++                        .param("type", "Retail"))
+                 .andExpect(status().is3xxRedirection())
+                 .andExpect(redirectedUrl("/"));
+ 
+-        // No shop should be saved if the seller does not exist.
+-        verify(shopRepository, never()).save(any(Shop.class));
++        // The controller checks the seller before building a command, so the
++        // handler is never reached and nobody sees a 500.
++        verify(createShopCommandHandler, never()).handle(any(CreateShopCommand.class));
++    }
++
++    @Test
++    void aRejectedCommandSendsTheMerchantBackToTheFormWithTheReason() throws Exception {
++        when(sellerRepository.findById(1L)).thenReturn(Optional.of(mock(Seller.class)));
++        when(createShopCommandHandler.handle(any(CreateShopCommand.class)))
++                .thenThrow(new IllegalArgumentException("Shop name is required."));
++
++        mockMvc.perform(post("/sellers/1/shops")
++                        .param("name", "")
++                        .param("type", "Retail"))
++                .andExpect(status().is3xxRedirection())
++                .andExpect(redirectedUrl("/sellers/1/shops/new"))
++                .andExpect(flash().attribute("shopError", "Shop name is required."));
+     }
+ }
