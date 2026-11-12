@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Catalogue - Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a th:href="@{/shops}">All shops</a>
+            <a th:href="@{/catalogue}">Catalogue</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="container">
+            <h1>Catalogue</h1>
+            <p class="lead">
+                Served entirely from the read model. This page never queries the shop table &mdash;
+                every row below was written by a Kafka consumer replaying shop-created events.
+            </p>
+            <form th:action="@{/catalogue}" method="get">
+                <input type="search" name="q" placeholder="Search the read model" th:value="${query}">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="container">
+        <p class="empty" th:if="${projectionEmpty}">
+            The read model is empty. It is populated by events, so start the app with the
+            <strong>kafka</strong> profile and create a shop to see it fill.
+        </p>
+
+        <p class="muted" th:unless="${projectionEmpty}"
+           th:text="${#lists.size(shops)} == 1 ? '1 shop in the read model' : ${#lists.size(shops)} + ' shops in the read model'">
+            0 shops in the read model
+        </p>
+
+        <p class="empty" th:if="${!projectionEmpty and #lists.isEmpty(shops)}"
+           th:text="|Nothing in the read model matches &quot;${query}&quot;.|">
+            Nothing matches.
+        </p>
+
+        <ul class="shop-grid" th:unless="${#lists.isEmpty(shops)}">
+            <li class="shop-card" th:each="shop : ${shops}">
+                <h3><a th:href="@{/shops/{id}(id=${shop.shopId})}" th:text="${shop.name}">Shop name</a></h3>
+                <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
+                <p th:text="${shop.description}">Description</p>
+                <p class="muted" th:text="|from event · shopId ${shop.shopId}|">from event</p>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
+</body>
+</html>

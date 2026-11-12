@@ -22,23 +22,41 @@ public class LandingController {
 
     private final ShopRepository shopRepository;
     private final SellerRepository sellerRepository;
-    private Seller seller;
 
     public LandingController(ShopRepository shopRepository, SellerRepository sellerRepository) {
         this.shopRepository = shopRepository;
         this.sellerRepository = sellerRepository;
-        this.seller = new Seller();
     }
 
     @GetMapping("/")
     public String landing(Model model) {
-        List<Shop> featuredShops = StreamSupport.
-                stream(shopRepository.findAll().spliterator(), false)
+        List<Shop> featuredShops = StreamSupport
+                .stream(shopRepository.findAll().spliterator(), false)
                 .limit(FEATURED_SHOP_COUNT)
                 .toList();
+
         model.addAttribute("featuredShops", featuredShops);
         model.addAttribute("shopCount", shopRepository.count());
-        model.addAttribute("sellerId", seller.getId());
+        model.addAttribute("sellerId", currentSellerId());
+
         return "index";
+    }
+
+    /**
+     * Which seller the "Create a shop" link acts as.
+     *
+     * There is no sign-in yet, so the page stands in the first seller in the
+     * database. The seed data always writes one, and when the table is empty
+     * this returns null and the template leaves the link out rather than
+     * pointing it at a seller that does not exist.
+     *
+     * This goes away in Milestone 2, when the signed-in seller is the answer.
+     */
+    private Long currentSellerId() {
+        return StreamSupport
+                .stream(sellerRepository.findAll().spliterator(), false)
+                .map(Seller::getId)
+                .findFirst()
+                .orElse(null);
     }
 }
