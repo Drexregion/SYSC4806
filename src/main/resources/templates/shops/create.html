@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Your Shop | Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+        </nav>
+    </div>
+</header>
+
+<main class="create-shop-page">
+
+    <div class="create-shop-container">
+
+        <div class="create-shop-heading align-items-center">
+            <span class="eyebrow">SELLER DASHBOARD</span>
+            <h1>Create your shop</h1>
+            <p>Give your business a home on Mini-Shopify.
+                Tell customers what makes your shop special.</p>
+        </div>
+
+        <div class="create-shop-card">
+
+            <p class="form-error" th:if="${shopError}" th:text="${shopError}">Something was wrong with the form.</p>
+
+            <form th:action="@{/sellers/{id}/shops(id=${seller.id})}"
+                  th:object="${shop}"
+                  method="post">
+
+                <div class="form-group">
+                    <label for="name">Shop name</label>
+                    <input
+                            type="text"
+                            id="name"
+                            th:field="*{name}"
+                            placeholder="e.g. Tech Haven"
+                            required>
+                    <small>Choose a name customers will recognize.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Category</label>
+                    <input
+                            type="text"
+                            id="type"
+                            th:field="*{type}"
+                            placeholder="e.g. Electronics, Clothing, Food"
+                            required>
+                    <small>What type of products will you sell?</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Shop description</label>
+                    <textarea
+                            id="description"
+                            th:field="*{description}"
+                            placeholder="Tell customers about your shop and what you offer..."
+                            rows="5"
+                            required></textarea>
+                    <small>Give customers a reason to explore your shop.</small>
+                </div>
+
+                <div class="form-actions">
+                    <a th:href="@{/}" class="cancel-button">Cancel</a>
+                    <button type="submit" class="create-button">
+                        Create Shop →
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+
+        <p class="form-footer">
+            Ready to start selling? Your shop is just one step away.
+        </p>
+
+    </div>
+
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        SYSC 4806 term project, Carleton University
+    </div>
+</footer>
+
+</body>
+</html>
