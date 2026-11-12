@@ -1,5 +1,6 @@
 package ca.carletonu.controllers;
 
+import ca.carletonu.cqrs.commands.CreateShopCommand;
 import ca.carletonu.cqrs.handlers.CreateShopCommandHandler;
 import ca.carletonu.models.Seller;
 import ca.carletonu.models.Shop;
@@ -68,13 +69,18 @@ class SellerControllerTest {
     @Test
     void testCreateShop() throws Exception {
         // Arrange
-        Seller seller = mock(Seller.class);
-
-        when(sellerRepository.findById(1L))
-                .thenReturn(Optional.of(seller));
+        CreateShopCommand command = new CreateShopCommand(
+                1L,
+                "Tech Store",
+                "Electronics and gadgets",
+                "RETAIL"
+        );
 
         // Act and Assert
-        mockMvc.perform(post("/1/shops"))
+        mockMvc.perform(post("/1/shops")
+                        .param("name", "Tech Store")
+                        .param("description", "Electronics and gadgets")
+                        .param("type", "RETAIL"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"))
                 .andExpect(flash().attribute(
@@ -82,8 +88,8 @@ class SellerControllerTest {
                         "Your shop was created successfully!"
                 ));
 
-        // Verify that the shop was saved and associated with the seller.
-        verify(shopRepository).save(any(Shop.class));
+        // Verify that the command handler received the correct command.
+        verify(createShopCommandHandler).handle(command);
     }
 
     @Test
