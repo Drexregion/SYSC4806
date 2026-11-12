@@ -1,6 +1,8 @@
 package ca.carletonu.controllers;
 
+import ca.carletonu.models.Seller;
 import ca.carletonu.models.Shop;
+import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,9 +21,18 @@ public class LandingController {
     static final int FEATURED_SHOP_COUNT = 6;
 
     private final ShopRepository shopRepository;
+    private final SellerRepository sellerRepository;
+    private Seller seller;
 
-    public LandingController(ShopRepository shopRepository) {
+    public LandingController(ShopRepository shopRepository, SellerRepository sellerRepository) {
         this.shopRepository = shopRepository;
+        this.sellerRepository = sellerRepository;
+        this.seller = new Seller();
+        seller.setName("Iheanyi");
+        seller.setPassword("12345678ABC!");
+        seller.setPhone("12345678");
+        Seller savedSeller = sellerRepository.save(seller);
+        System.out.println(savedSeller.getId());
     }
 
     @GetMapping("/")
@@ -31,6 +42,7 @@ public class LandingController {
                 .toList();
         model.addAttribute("featuredShops", featuredShops);
         model.addAttribute("shopCount", shopRepository.count());
+        model.addAttribute("sellerId", seller.getId());
         return "index";
     }
 }
