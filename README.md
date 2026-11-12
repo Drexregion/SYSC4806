@@ -1,2 +1,261 @@
-# SYSC4806
-Mini-Shopify — a Spring Boot web app where merchants create shops and list products with inventory, and customers search shops by name or category and browse their catalogues. SYSC 4806 term project, Carleton University.
+# Mini-Shopify
+
+A marketplace where merchants open a shop and stock it with products, and customers find shops by name
+or category and browse their catalogues. SYSC 4806 term project, Carleton University.
+
+**Live:** https://sysc4806-minishopify-ergyb4hpcef7fufw.northcentralus-01.azurewebsites.net
+
+Every merge to `main` builds and deploys itself. The database is in-memory, so the deployed site reseeds
+demo data on each deploy.
+ 
+---
+
+## Current state
+
+As of 12 November 2026, end of Sprint 1 (Milestone 1).
+Status below mirrors the [project board](https://github.com/users/Drexregion/projects/2).
+
+### Completed
+
+| # | Item | Owner |
+|---|------|-------|
+| 7, 18 | Domain model and repositories — Person, Customer, Seller, Shop, Product, Item, Service, Transaction | Iheanyi |
+| 8 | Spring Boot entry point, H2 datasource, Spring Data REST at `/api` | Divine |
+| 6 | GitHub Actions CI, Azure App Service deployment, branch protection | Divine |
+| 9 | Pull request and issue templates, contributing guide | Divine |
+| 1 | Landing page with featured shops | Idara |
+| 2 | Shop page with products, stock and seller | Idara |
+| 5 | All Shops page with sorting | Idara |
+| 11 | Shop search by name or category | Rotimi |
+| 17 | Merchant adds products to a shop | Rotimi |
+| 4 | Item details page | Bomi |
+| 19 | Demo data seeded at startup | Divine |
+| 14 | Weekly scrum, 5 November | All |
+
+### In review
+
+| # | Item | Owner | Blocker |
+|---|------|-------|---------|
+| 33 | Shop creation reworked onto CQRS with Kafka | Iheanyi | Changes requested. CI red; Kafka currently required at startup, which breaks the Azure deploy |
+
+### Open
+
+| # | Item | Owner |
+|---|------|-------|
+| 16 | Merchant can create a shop (delivered by PR #33 once it lands) | Iheanyi |
+| 12 | Test coverage for the Milestone 1 use case | Bomi |
+| 10 | This README | All |
+| 13 | Weekly scrum, 12 November | All |
+| 3 | Account page — **deliberately deferred**, out of scope for Milestone 1 | Rotimi |
+
+### Milestone 1 use case
+
+The milestone asks for a use case that collects data from the back end, does something with it, and
+displays the result. Ours runs end to end on the deployed site:
+
+1. A merchant opens a shop page and submits the add-product form — name, description, price, inventory
+2. The controller validates server-side and persists against that shop, then redirects
+3. The product appears on the shop page with its stock level, and is reachable at `/products/{id}`
+4. A customer finds the shop through search by name or category
+### Numbers
+
+- 42 tests across 8 test classes, most driving real HTTP against a real database
+- 15 pull requests merged, each with two approving reviews
+- 0 direct commits to `main` by a team member — everything arrived through a pull request
+---
+
+## Plan for Sprint 2 (Milestone 2)
+
+Ordered by what blocks what.
+
+| Priority | Item | Why now | Owner |
+|---|------|---------|-------|
+| 1 | Land PR #33 — make Kafka opt-in behind a Spring profile, restore `application.properties`, add server-side validation | Unblocks #16 and stops the deploy breaking | Iheanyi |
+| 2 | Cart and simulated checkout | The remaining half of the project brief; purchases must respect inventory | Rotimi |
+| 3 | Read models behind search and browse, fed by Kafka consumers | Catalogue reads stop competing with writes for the same tables | Idara |
+| 4 | Command handlers for the remaining writes | Moves validation out of controllers, consistent with #33 | Iheanyi |
+| 5 | Test coverage for the create and checkout paths, including the async path | #12 carries over; the async path needs different test shapes | Bomi |
+| 6 | Persistent database to replace in-memory H2 | Data currently dies on every deploy | Divine |
+| 7 | Accounts and sign-in | Every visitor currently acts as the first seller in the database | Rotimi |
+| 8 | Account page | #3, unblocked once authentication exists | Rotimi |
+
+### Known gaps carried into Sprint 2
+
+- **No authentication.** `LandingController` stands in the first seller in the database. Any visitor can
+  act as that seller.
+- **In-memory database.** `ddl-auto=create-drop`, so every restart and deploy starts empty and reseeds.
+- **No broker in production.** Azure App Service free tier cannot host Kafka. The deployed build runs
+  with messaging disabled; the event flow is demonstrated locally via `docker-compose.yml`.
+- **`Customer.transactionHistory`** is a `List<String>` with no mapping annotation and is not a usable
+  part of the schema. It should become a proper relationship to `Transaction` or be removed.
+- **Test isolation.** Test classes manage shared database state in several different ways. They pass on
+  class ordering rather than by design. Standardising this is part of #12.
+---
+
+## Database schema
+
+Generated by Hibernate from the `@Entity` classes at startup (`ddl-auto=create-drop`).
+Both inheritance hierarchies use the JPA default, single-table-per-hierarchy with a `DTYPE`
+discriminator column.
+
+### `PERSON` — Person, Customer, Seller
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `dtype` | varchar | discriminator: `Person`, `Customer`, `Seller` |
+| `name` | varchar | |
+| `email` | varchar | |
+| `password` | varchar | plain text today; replaced when authentication lands |
+| `phone` | varchar | |
+| `address` | varchar | Customer only, null for other subtypes |
+
+### `PRODUCT` — Product, Item, Service
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `dtype` | varchar | discriminator: `Product`, `Item`, `Service` |
+| `name` | varchar | |
+| `description` | varchar | |
+| `price` | double | |
+| `quantity` | integer | Item only — inventory count |
+| `product_type` | varchar | Item only |
+| `duration` | integer | Service only — minutes |
+
+### `SHOP`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `name` | varchar | |
+| `description` | varchar | |
+| `type` | varchar | the shop's category, what search matches on |
+| `seller_id` | bigint | FK → `PERSON.id` |
+
+### `TRANSACTION`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `date` | timestamp | |
+| `shop_id` | bigint | FK → `SHOP.id` |
+| `product_id` | bigint | FK → `PRODUCT.id` |
+| `customer_id` | bigint | FK → `PERSON.id` |
+
+### Join tables
+
+| Table | Columns | From |
+|---|---|---|
+| `SHOP_PRODUCTS` | `shop_id`, `products_id` | `Shop.products`, unidirectional `@OneToMany` |
+| `SHOP_CUSTOMERS` | `shop_id`, `customers_id` | `Shop.customers`, `@ManyToMany` |
+| `CUSTOMER_FAVORITE_SHOPS` | `customer_id`, `favorite_shops_id` | `Customer.favoriteShops`, `@ManyToMany` |
+
+`Seller.shops` is mapped by `Shop.seller` and creates no table of its own.
+
+Browse the live schema at `/h2-console` when running locally
+(JDBC URL `jdbc:h2:mem:minishopify`, user `sa`, no password).
+
+### Relationships
+
+```
+Person ─┬─< Customer
+        └─< Seller ──1:N── Shop ──M:N── Product        (via SHOP_PRODUCTS)
+                            │
+                            ├──M:N── Customer           (via SHOP_CUSTOMERS)
+                            │
+                            └──1:N── Transaction ──N:1── Customer
+                                          │
+                                          └──N:1── Product
+ 
+Product ─┬─< Item      (quantity, productType)
+         └─< Service   (duration)
+```
+ 
+---
+
+## Running it
+
+### Requirements
+
+- JDK 21
+- Maven 3.9+
+- Docker, only for the Kafka event flow
+### Locally
+
+```bash
+mvn spring-boot:run
+```
+
+Then http://localhost:8080. Seed data loads automatically when the shop table is empty.
+
+### With the Kafka event flow
+
+```bash
+docker compose up -d
+mvn spring-boot:run -Dspring-boot.run.profiles=kafka
+```
+
+Without the `kafka` profile the messaging beans are not created and the application runs with no broker,
+which is how it runs on Azure. Shops are still created, the event is simply not published.
+
+### Tests
+
+```bash
+mvn verify
+```
+ 
+---
+
+## Architecture
+
+| Layer | Technology |
+|---|---|
+| Runtime | Java 21, Spring Boot 4.1.1 |
+| Web | Spring MVC, Thymeleaf, post-redirect-get |
+| Persistence | Spring Data JPA, Hibernate |
+| Database | H2, in memory |
+| REST | Spring Data REST, base path `/api` |
+| Messaging | Spring for Apache Kafka, profile `kafka` |
+| Build | Maven |
+| CI | GitHub Actions — `mvn verify` on every push and pull request |
+| Deployment | Azure App Service, Linux, OIDC federated identity |
+
+### Packages
+
+```
+ca.carletonu
+├── controllers      Landing, Shop, ShopSearch, ShopProduct, Product, Seller
+├── models           entities
+│   └── repositories Spring Data repositories
+├── cqrs
+│   ├── commands     CreateShopCommand
+│   └── handlers     CreateShopCommandHandler
+├── events           ShopCreatedEvent
+├── messaging        KafkaProducer, KafkaConsumer, KafkaTopicConfig
+└── data             DemoDataSeeder
+```
+ 
+---
+
+## How we work
+
+Set out in full in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- `main` is protected. No direct pushes
+- Branches are `feat/`, `fix/`, `ci/` or `docs/`
+- Every pull request needs two approving reviews and a green CI build
+- Pull requests close their issue with a keyword in the **description** — a keyword in the title does
+  not work, which cost us a stale board card once already
+- Weekly scrum notes are kept as issues
+## Team
+
+| | Area |
+|---|---|
+| Divine Eyo | CI/CD, Azure deployment, project board and issue hygiene |
+| Iheanyi Njokuobi | Domain model, CQRS command side |
+| Idara | Views and templates |
+| Rotimi | Controllers, search, product creation |
+| Bomi | Testing, item details page |
+
+Everyone authors pull requests and reviews other people's across all areas.
