@@ -10,7 +10,7 @@ import java.util.Optional;
  * The query side's repository. Only the catalogue reads from this, and only
  * the projection writes to it.
  */
-@RepositoryRestResource(path = "shop-summaries")
+@RepositoryRestResource(path = "shop-summaries", exported = false)
 public interface ShopSummaryRepository extends CrudRepository<ShopSummary, Long> {
 
     Optional<ShopSummary> findByShopId(Long shopId);
