@@ -57,9 +57,6 @@ public class Transaction {
             this.shop.getProducts().remove(product);
             // add some dummy payment logic
             date = new Date();
-            this.customer.getTransactionHistory().add("Bought "
-                    + product.getName() + " from " + shop.getName() + " for " + product.getPrice()
-                    + " at " + date.toString());
             return true;
         }
         return false;
@@ -67,6 +64,13 @@ public class Transaction {
 
     public Long getId() {
         return id;
+    }
+
+    /**
+     * When the purchase went through, or null if buy() has not succeeded yet.
+     */
+    public Date getDate() {
+        return date;
     }
 
 //    public boolean refund(Product product) {
