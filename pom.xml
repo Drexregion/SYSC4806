@@ -59,6 +59,14 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PostgreSQL driver. Only used when the "postgres" profile is active,
+             which is how the app runs on Azure. Local development stays on H2. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
