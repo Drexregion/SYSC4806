@@ -29,6 +29,8 @@
     </section>
 
     <section class="container">
+        <div th:replace="~{fragments/cart-notice :: cartNotice}"></div>
+
         <h2>Products</h2>
         <p class="muted" th:text="${#lists.size(products)} == 1 ? '1 product' : ${#lists.size(products)} + ' products'">
             0 products
@@ -50,6 +52,14 @@
                 </th:block>
                 <p class="muted" th:if="${product instanceof T(ca.carletonu.models.Service)}"
                    th:text="|${product.duration} min service|">0 min service</p>
+                <!--/* Adds one; the item page is where a shopper picks a quantity.
+                       An item with nothing in stock gets no button rather than one that always fails. */-->
+                <form class="add-to-cart" th:action="@{/cart/items}" method="post"
+                      th:unless="${product instanceof T(ca.carletonu.models.Item) and product.quantity <= 0}">
+                    <input type="hidden" name="productId" th:value="${product.id}">
+                    <input type="hidden" name="returnTo" th:value="|/shops/${shop.id}|">
+                    <button class="button" type="submit">Add to cart</button>
+                </form>
             </li>
         </ul>
 

@@ -1,0 +1,7 @@
+<!--/* What happened to the last Add to cart. Include it on any page that offers one with:
+     <div th:replace="~{fragments/cart-notice :: cartNotice}"></div>
+     cartMessage and cartError are flash attributes set by CartController. */-->
+<th:block th:fragment="cartNotice">
+    <p class="form-success" th:if="${cartMessage}" th:text="${cartMessage}"></p>
+    <p class="form-error" th:if="${cartError}" th:text="${cartError}"></p>
+</th:block>

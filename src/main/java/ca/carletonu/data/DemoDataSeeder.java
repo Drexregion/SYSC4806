@@ -1,9 +1,11 @@
 package ca.carletonu.data;
 
+import ca.carletonu.models.Customer;
 import ca.carletonu.models.Item;
 import ca.carletonu.models.Seller;
 import ca.carletonu.models.Service;
 import ca.carletonu.models.Shop;
+import ca.carletonu.models.repositories.CustomerRepository;
 import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
 import org.slf4j.Logger;
@@ -22,6 +24,10 @@ import org.springframework.stereotype.Component;
  *
  * It only runs when the shop table is empty, so restarting never duplicates
  * rows and it never overwrites anything created during a session.
+ *
+ * It also writes one customer, checked separately, because there is no
+ * sign-in yet and the cart belongs to the first customer in the database
+ * (see CurrentCustomer).
  */
 @Component
 public class DemoDataSeeder implements ApplicationRunner {
@@ -30,14 +36,24 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private final ShopRepository shopRepository;
     private final SellerRepository sellerRepository;
+    private final CustomerRepository customerRepository;
 
-    public DemoDataSeeder(ShopRepository shopRepository, SellerRepository sellerRepository) {
+    public DemoDataSeeder(ShopRepository shopRepository, SellerRepository sellerRepository,
+                          CustomerRepository customerRepository) {
         this.shopRepository = shopRepository;
         this.sellerRepository = sellerRepository;
+        this.customerRepository = customerRepository;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        // Checked on its own, ahead of the shops, so a database that already
+        // has shops from before customers were seeded still gets a shopper.
+        if (customerRepository.count() == 0) {
+            seedCustomer();
+            log.info("Seeded a demo customer");
+        }
+
         if (shopRepository.count() > 0) {
             log.info("Shops already in the database, skipping demo data");
             return;
@@ -99,6 +115,14 @@ public class DemoDataSeeder implements ApplicationRunner {
         bikes.addProduct(new Item("Refurbished Commuter", "Stripped, rebuilt and road tested", 320.00, 2, "Bicycle"));
         bikes.addProduct(new Service("Full Tune Up", "Gears, brakes, bearings and a wash", 55.00, 90));
         shopRepository.save(bikes);
+    }
+
+    /**
+     * Writes the shopper. Package private so the tests can call it directly.
+     */
+    void seedCustomer() {
+        customerRepository.save(new Customer("Sam Rivera", "sam@minishopify.test", "demo",
+                "613-555-0188", "75 Laurier Ave W, Ottawa"));
     }
 
     private Shop shop(String name, String description, String type) {

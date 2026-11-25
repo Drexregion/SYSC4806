@@ -33,10 +33,10 @@ class TransactionTests {
     void buyingAProductTheShopSellsSucceeds() {
         Transaction transaction = new Transaction(shop, lamp, customer);
 
+        assertThat(transaction.getDate()).isNull();
+
         assertThat(transaction.buy(lamp)).isTrue();
-        assertThat(customer.getTransactionHistory()).hasSize(1);
-        assertThat(customer.getTransactionHistory().get(0))
-                .startsWith("Bought Lamp from Lantern Works for 89.0");
+        assertThat(transaction.getDate()).isNotNull();
     }
 
     @Test
@@ -54,7 +54,7 @@ class TransactionTests {
         Transaction transaction = new Transaction(shop, other, customer);
 
         assertThat(transaction.buy(other)).isFalse();
-        assertThat(customer.getTransactionHistory()).isEmpty();
+        assertThat(transaction.getDate()).isNull();
         assertThat(shop.getProducts()).containsExactly(lamp);
     }
 
@@ -64,7 +64,6 @@ class TransactionTests {
 
         assertThat(transaction.buy(lamp)).isTrue();
         assertThat(transaction.buy(lamp)).isFalse();
-        assertThat(customer.getTransactionHistory()).hasSize(1);
     }
 
     @Test

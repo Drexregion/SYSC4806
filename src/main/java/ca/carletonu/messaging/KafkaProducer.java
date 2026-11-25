@@ -1,6 +1,7 @@
 package ca.carletonu.messaging;
 
 import ca.carletonu.events.ProductAddedEvent;
+import ca.carletonu.events.CartItemAddedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -10,8 +11,8 @@ import org.springframework.stereotype.Component;
  * Publishes domain events to Kafka.
  *
  * Only exists under the "kafka" profile. Azure App Service has no broker, so
- * the deployed application runs without this bean and the command handler
- * simply skips publishing. Start the app with
+ * the deployed application runs without this bean and the command handlers
+ * simply skip publishing. Start the app with
  * --spring.profiles.active=kafka (and the broker from docker-compose.yml)
  * to get the event flow.
  */
@@ -22,6 +23,9 @@ public class KafkaProducer {
     private static final String SHOP_CREATED_TOPIC = "shop-created";
     private static final String PRODUCT_ADDED_TOPIC = "product-added";
 
+    private static final String CART_ITEM_ADDED_TOPIC = "cart-item-added";
+
+    /** Object rather than one event type, so one template sends every event. */
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaProducer(KafkaTemplate<String, Object> kafkaTemplate) {
@@ -38,5 +42,11 @@ public class KafkaProducer {
         this.kafkaTemplate.send(PRODUCT_ADDED_TOPIC,
                 productAddedEvent.shopId().toString(),
                 productAddedEvent);
+    }
+
+    public void sendCartItemAddedEvent(CartItemAddedEvent cartItemAddedEvent) {
+        this.kafkaTemplate.send(CART_ITEM_ADDED_TOPIC,
+                cartItemAddedEvent.customerId().toString(),
+                cartItemAddedEvent);
     }
 }
