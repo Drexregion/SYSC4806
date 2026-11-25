@@ -1,5 +1,6 @@
 package ca.carletonu.messaging;
 
+import ca.carletonu.events.CartItemAddedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,5 +30,19 @@ public class KafkaConsumer {
                 shopCreatedEvent.shopId(),
                 shopCreatedEvent.name(),
                 shopCreatedEvent.sellerId());
+    }
+
+    /**
+     * Nothing projects cart events yet, since no page reads a cart from a read
+     * model. Logging them is what shows the flow working end to end.
+     */
+    @KafkaListener(topics = "cart-item-added", groupId = "mini-shopify-group")
+    public void consumeCartItemAdded(CartItemAddedEvent cartItemAddedEvent) {
+        log.info("CartItemAddedEvent received: cartId={} customerId={} productId={} added={} lineNow={}",
+                cartItemAddedEvent.cartId(),
+                cartItemAddedEvent.customerId(),
+                cartItemAddedEvent.productId(),
+                cartItemAddedEvent.quantityAdded(),
+                cartItemAddedEvent.lineQuantity());
     }
 }

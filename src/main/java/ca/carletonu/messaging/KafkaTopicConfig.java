@@ -25,4 +25,12 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic cartItemAddedTopic() {
+        return TopicBuilder.name("cart-item-added")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }

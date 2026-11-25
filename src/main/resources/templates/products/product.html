@@ -22,6 +22,8 @@
         <a th:href="@{/shops/{id}(id=${shop.id})}" th:text="|← Back to ${shop.name}|">← Back to shop</a>
     </p>
 
+    <div th:replace="~{fragments/cart-notice :: cartNotice}"></div>
+
     <div class="product-detail">
         <section class="product-info">
             <p class="tag" th:if="${product instanceof T(ca.carletonu.models.Item) and product.productType != null}"
@@ -37,6 +39,20 @@
             </th:block>
             <p class="muted" th:if="${product instanceof T(ca.carletonu.models.Service)}"
                th:text="|${product.duration} min service|">0 min service</p>
+
+            <!--/* max caps an item at its stock in the browser; the handler enforces it either way.
+                   An item with nothing in stock gets no form rather than one that always fails. */-->
+            <form class="add-to-cart" th:action="@{/cart/items}" method="post"
+                  th:with="isItem=${product instanceof T(ca.carletonu.models.Item)}"
+                  th:unless="${product instanceof T(ca.carletonu.models.Item) and product.quantity <= 0}">
+                <input type="hidden" name="productId" th:value="${product.id}">
+                <input type="hidden" name="returnTo" th:value="|/products/${product.id}|">
+                <label class="field">Quantity
+                    <input name="quantity" type="number" min="1" value="1" required
+                           th:max="${isItem ? product.quantity : null}">
+                </label>
+                <button class="button" type="submit">Add to cart</button>
+            </form>
 
             <h2>Description</h2>
             <p th:if="${product.description}" th:text="${product.description}">Description</p>

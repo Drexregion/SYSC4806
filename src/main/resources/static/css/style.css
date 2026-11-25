@@ -522,3 +522,20 @@ a {
     background: #fbeae7;
     color: #a33a2a;
 }
+.form-success {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #e6f4ea;
+    color: #2a6b3c;
+}
+.add-to-cart {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    margin: 12px 0;
+}
+.add-to-cart .field input {
+    width: 6rem;
+}
