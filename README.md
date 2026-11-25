@@ -143,6 +143,23 @@ discriminator column.
 
 `TRANSACTION` is the only record of a purchase. A customer's purchase history is
 `TransactionRepository.findByCustomerOrderByDateDesc(customer)`; `Customer` stores no copy of it (#48).
+### `CART`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `customer_id` | bigint | FK → `PERSON.id`, not null |
+| `status` | varchar | `OPEN` or `CHECKED_OUT` |
+| `open_for_customer_id` | bigint | unique; the customer's id while the cart is open, null once checked out. Enforces at most one open cart per customer |
+
+### `CART_ITEM`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | primary key, generated |
+| `cart_id` | bigint | FK → `CART.id`, not null |
+| `product_id` | bigint | FK → `PRODUCT.id`, not null |
+| `quantity` | integer | always greater than zero |
 
 ### Join tables
 
@@ -168,6 +185,8 @@ Person ─┬─< Customer
                             └──1:N── Transaction ──N:1── Customer
                                           │
                                           └──N:1── Product
+
+Customer ──1:N── Cart ──1:N── CartItem ──N:1── Product   (at most one OPEN cart per customer)
  
 Product ─┬─< Item      (quantity, productType)
          └─< Service   (duration)

@@ -53,9 +53,23 @@
             <artifactId>spring-boot-h2console</artifactId>
         </dependency>
 
+        <!-- CQRS with Kafka -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- PostgreSQL driver. Only used when the "postgres" profile is active,
+             which is how the app runs on Azure. Local development stays on H2. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
