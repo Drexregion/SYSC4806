@@ -10,8 +10,6 @@ public class Customer extends Person{
     @ManyToMany
     private List<Shop> favoriteShops = new ArrayList<>();
     private String address;
-    @ElementCollection
-    private List<String> transactionHistory = new ArrayList<>();
     public Customer(String name, String email, String password, String phone,  String address)
     {
         super(name, email, password, phone);
@@ -41,7 +39,6 @@ public class Customer extends Person{
         this.address = address;
     }
 
-    public List<String> getTransactionHistory() {
-        return transactionHistory;
-    }
+    // Purchase history is not stored here. Each purchase is a Transaction that
+    // references its customer; use TransactionRepository.findByCustomerOrderByDateDesc.
 }

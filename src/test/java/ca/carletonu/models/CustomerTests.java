@@ -13,7 +13,6 @@ class CustomerTests {
         assertThat(bo.getName()).isEqualTo("Bo");
         assertThat(bo.getAddress()).isEqualTo("1 Main St");
         assertThat(bo.getFavoriteShops()).isEmpty();
-        assertThat(bo.getTransactionHistory()).isEmpty();
     }
 
     @Test

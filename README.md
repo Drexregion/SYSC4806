@@ -86,8 +86,6 @@ Ordered by what blocks what.
 - **In-memory database.** `ddl-auto=create-drop`, so every restart and deploy starts empty and reseeds.
 - **No broker in production.** Azure App Service free tier cannot host Kafka. The deployed build runs
   with messaging disabled; the event flow is demonstrated locally via `docker-compose.yml`.
-- **`Customer.transactionHistory`** is a `List<String>` with no mapping annotation and is not a usable
-  part of the schema. It should become a proper relationship to `Transaction` or be removed.
 - **Test isolation.** Test classes manage shared database state in several different ways. They pass on
   class ordering rather than by design. Standardising this is part of #12.
 ---
@@ -143,6 +141,8 @@ discriminator column.
 | `product_id` | bigint | FK → `PRODUCT.id` |
 | `customer_id` | bigint | FK → `PERSON.id` |
 
+`TRANSACTION` is the only record of a purchase. A customer's purchase history is
+`TransactionRepository.findByCustomerOrderByDateDesc(customer)`; `Customer` stores no copy of it (#48).
 ### `CART`
 
 | Column | Type | Notes |
@@ -167,7 +167,7 @@ discriminator column.
 |---|---|---|
 | `SHOP_PRODUCTS` | `shop_id`, `products_id` | `Shop.products`, unidirectional `@OneToMany` |
 | `SHOP_CUSTOMERS` | `shop_id`, `customers_id` | `Shop.customers`, `@ManyToMany` |
-| `CUSTOMER_FAVORITE_SHOPS` | `customer_id`, `favorite_shops_id` | `Customer.favoriteShops`, `@ManyToMany` |
+| `PERSON_FAVORITE_SHOPS` | `customer_id`, `favorite_shops_id` | `Customer.favoriteShops`, `@ManyToMany` (named after `PERSON`, the table Customer shares) |
 
 `Seller.shops` is mapped by `Shop.seller` and creates no table of its own.
 
