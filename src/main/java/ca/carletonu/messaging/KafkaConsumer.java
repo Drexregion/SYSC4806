@@ -1,5 +1,6 @@
 package ca.carletonu.messaging;
 
+import ca.carletonu.events.ProductAddedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 /**
  * Reads shop-created events off the log.
  *
- * For now it only logs what it receives. In Milestone 2 this is where the
+ * For now, it only logs what it receives. In Milestone 2 this is where the
  * read models for search and browsing get updated, which is the point of
  * splitting the write side from the read side in the first place.
  *
@@ -29,5 +30,14 @@ public class KafkaConsumer {
                 shopCreatedEvent.shopId(),
                 shopCreatedEvent.name(),
                 shopCreatedEvent.sellerId());
+    }
+
+    @KafkaListener(topics = "product-added", groupId = "mini-shopify-group")
+    public void consumeProductAdded(ProductAddedEvent productAddedEvent) {
+        log.info("ProductAddedEvent received: shopId={} productId={} kind={} name={}",
+                productAddedEvent.shopId(),
+                productAddedEvent.productId(),
+                productAddedEvent.kind(),
+                productAddedEvent.name());
     }
 }

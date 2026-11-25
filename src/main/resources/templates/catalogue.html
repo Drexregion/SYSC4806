@@ -24,7 +24,7 @@
             <h1>Catalogue</h1>
             <p class="lead">
                 Served entirely from the read model. This page never queries the shop table &mdash;
-                every row below was written by a Kafka consumer replaying shop-created events.
+                every row below was written by a Kafka consumer replaying shop-created and product-added events.
             </p>
             <form th:action="@{/catalogue}" method="get">
                 <input type="search" name="q" placeholder="Search the read model" th:value="${query}">
@@ -54,6 +54,11 @@
                 <h3><a th:href="@{/shops/{id}(id=${shop.shopId})}" th:text="${shop.name}">Shop name</a></h3>
                 <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
                 <p th:text="${shop.description}">Description</p>
+                <p class="muted"
+                   th:text="${shop.itemCount + (shop.itemCount == 1 ? ' item' : ' items') + ' · '
+                            + shop.serviceCount + (shop.serviceCount == 1 ? ' service' : ' services')}">
+                    0 items · 0 services
+                </p>
                 <p class="muted" th:text="|from event · shopId ${shop.shopId}|">from event</p>
             </li>
         </ul>

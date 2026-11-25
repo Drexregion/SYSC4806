@@ -31,7 +31,7 @@ public class CatalogueController {
         String term = query == null ? "" : query.trim();
 
         List<ShopSummary> shops = term.isEmpty()
-                ? shopSummaryRepository.findAllByOrderByNameAsc()
+                ? shopSummaryRepository.findByNameIsNotNullOrderByNameAsc()
                 : shopSummaryRepository
                     .findByNameContainingIgnoreCaseOrTypeContainingIgnoreCaseOrderByNameAsc(term, term);
 
