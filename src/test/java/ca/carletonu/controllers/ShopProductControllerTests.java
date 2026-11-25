@@ -2,6 +2,7 @@ package ca.carletonu.controllers;
 
 import ca.carletonu.models.Item;
 import ca.carletonu.models.Product;
+import ca.carletonu.models.Service;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
 import org.junit.jupiter.api.Test;
@@ -98,6 +99,84 @@ class ShopProductControllerTests {
     }
 
     @Test
+    void negativePriceIsRejected() {
+        Shop shop = shopRepository.save(new Shop("Bargain Bin", "Test", "Test", null));
+
+        postProduct(shop.getId(), form("Widget", "Negative price", "-1.00", "5", ""));
+
+        assertThat(productsOf(shop.getId())).isEmpty();
+    }
+
+    @Test
+    void aProductAddedOverHttpGetsAnIdAndIsReachable() {
+        // Runs without the kafka profile, as on Azure: no broker, and the
+        // product is still saved. The id is the one the event would carry.
+        Shop shop = shopRepository.save(new Shop("Id Check Store", "Test", "Test", null));
+
+        postProduct(shop.getId(), form("Lantern", "Brass", "12.00", "3", "Home"));
+
+        Product saved = productsOf(shop.getId()).getFirst();
+        assertThat(saved.getId()).isNotNull();
+
+        assertThat(client.get().uri("/products/{id}", saved.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody())
+                .contains("Lantern");
+    }
+
+    @Test
+    void aServiceAddedThroughTheFormIsSavedAsAService() {
+        Shop shop = shopRepository.save(new Shop("Tea Room", "Tastings", "Tea", null));
+
+        MultiValueMap<String, String> form = serviceForm("Guided Tasting", "Six teas", "35.00", "60");
+        // The browser sends the hidden item fields too; they are ignored for a service
+        form.add("quantity", "");
+        form.add("productType", "");
+        postProduct(shop.getId(), form);
+
+        List<Product> products = productsOf(shop.getId());
+        assertThat(products).singleElement().isInstanceOf(Service.class);
+
+        Service service = (Service) products.getFirst();
+        assertThat(service.getName()).isEqualTo("Guided Tasting");
+        assertThat(service.getPrice()).isEqualTo(35.00);
+        assertThat(service.getDuration()).isEqualTo(60);
+
+        assertThat(shopPage(shop.getId())).contains("60 min service");
+    }
+
+    @Test
+    void aServiceWithoutDurationIsRejected() {
+        Shop shop = shopRepository.save(new Shop("Repair Shop", "Test", "Test", null));
+
+        postProduct(shop.getId(), serviceForm("Rewiring", "No duration", "45.00", ""));
+
+        assertThat(productsOf(shop.getId())).isEmpty();
+    }
+
+    @Test
+    void anItemWithoutInventoryIsRejected() {
+        Shop shop = shopRepository.save(new Shop("Empty Shelf", "Test", "Test", null));
+
+        postProduct(shop.getId(), form("Widget", "No inventory", "1.00", "", ""));
+
+        assertThat(productsOf(shop.getId())).isEmpty();
+    }
+
+    @Test
+    void theFormOffersBothKinds() {
+        Shop shop = shopRepository.save(new Shop("Kind Check Store", "Test", "Test", null));
+
+        assertThat(shopPage(shop.getId()))
+                .contains("value=\"ITEM\"")
+                .contains("value=\"SERVICE\"")
+                .contains("name=\"duration\"");
+    }
+
+    @Test
     void unknownShopIsNotFound() {
         client.post().uri("/shops/{id}/products", Long.MAX_VALUE)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -114,6 +193,17 @@ class ShopProductControllerTests {
         form.add("price", price);
         form.add("quantity", quantity);
         form.add("productType", productType);
+        return form;
+    }
+
+    private MultiValueMap<String, String> serviceForm(String name, String description, String price,
+                                                      String duration) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("kind", "SERVICE");
+        form.add("name", name);
+        form.add("description", description);
+        form.add("price", price);
+        form.add("duration", duration);
         return form;
     }
 

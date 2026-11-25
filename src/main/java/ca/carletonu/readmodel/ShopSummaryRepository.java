@@ -18,5 +18,9 @@ public interface ShopSummaryRepository extends CrudRepository<ShopSummary, Long>
     List<ShopSummary> findByNameContainingIgnoreCaseOrTypeContainingIgnoreCaseOrderByNameAsc(
             String name, String type);
 
-    List<ShopSummary> findAllByOrderByNameAsc();
+    /**
+     * Every described shop, by name. A placeholder row (products seen, shop
+     * event not yet) has no name and is left out until its shop event lands.
+     */
+    List<ShopSummary> findByNameIsNotNullOrderByNameAsc();
 }

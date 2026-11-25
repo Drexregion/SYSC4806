@@ -1,5 +1,6 @@
 package ca.carletonu.messaging;
 
+import ca.carletonu.events.ProductAddedEvent;
 import ca.carletonu.events.CartItemAddedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.springframework.context.annotation.Profile;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Component;
 public class KafkaProducer {
 
     private static final String SHOP_CREATED_TOPIC = "shop-created";
+    private static final String PRODUCT_ADDED_TOPIC = "product-added";
+
     private static final String CART_ITEM_ADDED_TOPIC = "cart-item-added";
 
     /** Object rather than one event type, so one template sends every event. */
@@ -33,6 +36,12 @@ public class KafkaProducer {
         this.kafkaTemplate.send(SHOP_CREATED_TOPIC,
                 shopCreatedEvent.shopId().toString(),
                 shopCreatedEvent);
+    }
+
+    public void sendProductAddedEvent(ProductAddedEvent productAddedEvent) {
+        this.kafkaTemplate.send(PRODUCT_ADDED_TOPIC,
+                productAddedEvent.shopId().toString(),
+                productAddedEvent);
     }
 
     public void sendCartItemAddedEvent(CartItemAddedEvent cartItemAddedEvent) {

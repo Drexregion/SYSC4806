@@ -485,6 +485,26 @@ a {
     grid-column: 1 / -1;
 }
 
+.kind-choice {
+    display: flex;
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.9rem;
+}
+
+.kind-choice legend {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+/* Show only the fields of the kind chosen above */
+.product-form:has(input[name="kind"][value="ITEM"]:checked) .service-only,
+.product-form:has(input[name="kind"][value="SERVICE"]:checked) .item-only {
+    display: none;
+}
+
 .field input,
 .field textarea {
     padding: 8px 12px;

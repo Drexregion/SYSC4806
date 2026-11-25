@@ -1,8 +1,8 @@
 package ca.carletonu.controllers;
 
-import ca.carletonu.models.Item;
-import ca.carletonu.models.Shop;
-import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.cqrs.commands.AddProductCommand;
+import ca.carletonu.cqrs.handlers.AddProductCommandHandler;
+import ca.carletonu.cqrs.handlers.ShopNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -13,15 +13,18 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * Lets a merchant add products to one of their shops.
+ * Lets a merchant add products, items or services, to one of their shops.
+ *
+ * Only translates the form into an AddProductCommand. The rules and the save
+ * live in AddProductCommandHandler.
  */
 @Controller
 public class ShopProductController {
 
-    private final ShopRepository shopRepository;
+    private final AddProductCommandHandler addProductCommandHandler;
 
-    public ShopProductController(ShopRepository shopRepository) {
-        this.shopRepository = shopRepository;
+    public ShopProductController(AddProductCommandHandler addProductCommandHandler) {
+        this.addProductCommandHandler = addProductCommandHandler;
     }
 
     /**
@@ -29,33 +32,36 @@ public class ShopProductController {
      */
     @PostMapping("/shops/{shopId}/products")
     public String addProduct(@PathVariable Long shopId,
-                             @ModelAttribute Item item,
+                             @ModelAttribute ProductForm form,
                              BindingResult bindingResult,
                              RedirectAttributes redirectAttributes) {
-        Shop shop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No shop with id " + shopId));
+        try {
+            // A field that is not a number never reaches the command, because
+            // the form could not be bound. That is a web concern, so it stays here.
+            if (bindingResult.hasErrors()) {
+                throw new IllegalArgumentException("Price, inventory and duration must be numbers.");
+            }
 
-        String error = validate(item, bindingResult);
-        if (error != null) {
+            addProductCommandHandler.handle(new AddProductCommand(
+                    shopId,
+                    form.getKind(),
+                    form.getName(),
+                    form.getDescription(),
+                    form.getPrice(),
+                    form.getQuantity(),
+                    form.getProductType(),
+                    form.getDuration()
+            ));
+        } catch (ShopNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
             // Flash attributes survive one redirect, so the shop page can show
             // the error and refill the form without this controller rendering it
-            redirectAttributes.addFlashAttribute("productError", error);
-            redirectAttributes.addFlashAttribute("productForm", item);
-            return "redirect:/shops/" + shopId;
+            redirectAttributes.addFlashAttribute("productError", e.getMessage());
+            redirectAttributes.addFlashAttribute("productForm", form);
         }
-
-        shop.addProduct(item);
-        shopRepository.save(shop);
 
         // Redirect after post, so refreshing the page does not add the product again
         return "redirect:/shops/" + shopId;
-    }
-
-    private String validate(Item item, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) return "Price and inventory must be numbers.";
-        if (item.getName() == null || item.getName().isBlank()) return "Name is required.";
-        if (item.getPrice() == null || item.getPrice() < 0) return "Price must be zero or more.";
-        if (item.getQuantity() < 0) return "Inventory cannot be negative.";
-        return null;
     }
 }
