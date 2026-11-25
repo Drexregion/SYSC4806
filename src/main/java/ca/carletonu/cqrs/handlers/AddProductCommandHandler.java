@@ -115,6 +115,12 @@ public class AddProductCommandHandler {
         if (command.name().trim().length() > 120) {
             return "Name has to be 120 characters or fewer.";
         }
+        if (tooLong(command.description())) {
+            return "Description has to be 255 characters or fewer.";
+        }
+        if (tooLong(command.productType())) {
+            return "Type has to be 255 characters or fewer.";
+        }
         if (command.price() == null || command.price().isNaN() || command.price() < 0) {
             return "Price must be zero or more.";
         }
@@ -139,5 +145,12 @@ public class AddProductCommandHandler {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /**
+     * Measured after trimming, because the trimmed value is what gets saved.
+     */
+    private static boolean tooLong(String value) {
+        return value != null && value.trim().length() > 255;
     }
 }
