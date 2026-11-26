@@ -3,6 +3,7 @@ package ca.carletonu.controllers;
 import ca.carletonu.models.Item;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.readmodel.ShopSummaryBackfill;
 import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ class AllShopsPageTests {
 
     @Autowired
     private ShopRepository shopRepository;
+
+    @Autowired
+    private ShopSummaryBackfill backfill;
 
     @Test
     void showsEmptyStateWhenThereAreNoShops() {
@@ -98,7 +102,14 @@ class AllShopsPageTests {
         assertThat(landing).contains("href=\"/shops\"");
     }
 
+    /**
+     * These tests write shops straight to the repository, which publishes no
+     * event, so the catalogue would not know about them. Backfilling first is
+     * what the application does at startup, and it is what lets a test assert
+     * on the page it just set up.
+     */
     private String getAllShopsPage() {
+        backfill.backfill();
         return client.get().uri("/shops")
                 .exchange()
                 .expectStatus().isOk()

@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The acceptance criterion on #16 is that a shop created through the form is
  * persisted and shows up, so that is what this checks. The application runs
  * without the "kafka" profile here, which is also how it runs on Azure: the
- * shop is still created, the event just is not published.
+ * event is published in process rather than to a broker.
  */
 @IntegrationTest
 class CreateShopIntegrationTests {

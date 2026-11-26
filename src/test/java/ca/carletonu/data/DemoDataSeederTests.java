@@ -1,6 +1,7 @@
 package ca.carletonu.data;
 
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.readmodel.ShopSummaryBackfill;
 import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ class DemoDataSeederTests {
 
     @Autowired
     private DemoDataSeeder seeder;
+
+    @Autowired
+    private ShopSummaryBackfill backfill;
 
     @Test
     void seedsEnoughShopsToFillTheLandingPage() {
@@ -65,7 +69,7 @@ class DemoDataSeederTests {
 
     @Test
     void seededShopsCanBeFoundByName() {
-        seeder.seed();
+        seedAndProject();
 
         assertThat(getPage("/shops/search?q=fernhill"))
                 .contains("Fernhill Plants")
@@ -74,7 +78,7 @@ class DemoDataSeederTests {
 
     @Test
     void seededShopsCanBeFoundByCategory() {
-        seeder.seed();
+        seedAndProject();
 
         assertThat(getPage("/shops/search?q=stationery"))
                 .contains("Quiet Quill");
@@ -99,6 +103,17 @@ class DemoDataSeederTests {
                 .contains("24 in stock")
                 .contains("Out of stock")
                 .contains("60 min service");
+    }
+
+    /**
+     * Search reads the catalogue, and the seeder writes straight to the
+     * repository with no event behind it, so the catalogue would not know
+     * about these shops. The application runs the backfill immediately after
+     * the seeder at startup; these tests do the same thing in the same order.
+     */
+    private void seedAndProject() {
+        seeder.seed();
+        backfill.backfill();
     }
 
     private String shopUrl(String shopName) {
