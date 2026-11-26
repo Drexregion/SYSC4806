@@ -9,12 +9,10 @@ import ca.carletonu.models.repositories.CartItemRepository;
 import ca.carletonu.models.repositories.CartRepository;
 import ca.carletonu.models.repositories.CustomerRepository;
 import ca.carletonu.models.repositories.ProductRepository;
-import org.junit.jupiter.api.AfterEach;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -29,8 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * hold even for a client posting straight to it: one open cart per customer,
  * and no line with a quantity of zero.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class CartRestIntegrationTests {
 
     @Autowired
@@ -57,14 +54,6 @@ class CartRestIntegrationTests {
         bo = customerRepository.save(new Customer("Bo", "bo-cart@example.com", "pw", "555", "1 Main St"));
         lamp = productRepository.save(new Item("Cart Lamp", "Brass", 89.0, 4, "Lighting"));
         rewiring = productRepository.save(new Service("Cart Rewiring", "Make it safe", 45.0, 45));
-    }
-
-    @AfterEach
-    void removeWhatThisTestMade() {
-        cartRepository.findByCustomerId(bo.getId()).forEach(cartRepository::delete);
-        customerRepository.delete(bo);
-        productRepository.delete(lamp);
-        productRepository.delete(rewiring);
     }
 
     @Test

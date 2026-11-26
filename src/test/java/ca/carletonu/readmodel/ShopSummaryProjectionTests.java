@@ -1,12 +1,11 @@
 package ca.carletonu.readmodel;
 
 import ca.carletonu.events.ShopCreatedEvent;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import ca.carletonu.models.Shop;
+import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,24 +18,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * catalogue is built from events, replay does not duplicate rows, and the page
  * shows nothing the log did not put there.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class ShopSummaryProjectionTests {
 
     @Autowired
     private RestTestClient client;
 
     @Autowired
+    private ShopRepository shopRepository;
+
+    @Autowired
     private ShopSummaryRepository shopSummaryRepository;
 
     @Autowired
     private ShopSummaryProjection projection;
-
-    @BeforeEach
-    @AfterEach
-    void clearReadModel() {
-        shopSummaryRepository.deleteAll();
-    }
 
     @Test
     void anEventBecomesARowInTheReadModel() {
@@ -87,10 +82,17 @@ class ShopSummaryProjectionTests {
 
     @Test
     void aShopInTheWriteModelIsInvisibleUntilAnEventArrives() {
+        Shop shop = shopRepository.save(new Shop("Unseen Goods", "Not projected yet", "Home", null));
+
         // Nothing has been projected, so the catalogue is empty even though the
-        // seeded shops exist in the write model. That is the separation.
+        // shop exists in the write model. That is the separation.
         assertThat(cataloguePage(""))
-                .contains("The read model is empty");
+                .contains("The read model is empty")
+                .doesNotContain("Unseen Goods");
+
+        projection.apply(event(shop.getId(), shop.getName(), shop.getDescription(), shop.getType()));
+
+        assertThat(cataloguePage("")).contains("Unseen Goods");
     }
 
     private ShopCreatedEvent event(Long shopId, String name, String description, String type) {
