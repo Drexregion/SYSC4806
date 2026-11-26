@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -213,6 +214,7 @@ class AddProductCommandHandlerTests {
             return null;
         }).when(provider).ifAvailable(any());
 
-        return new AddProductCommandHandler(shopRepository, productRepository, provider);
+        return new AddProductCommandHandler(shopRepository, productRepository, provider,
+                mock(ApplicationEventPublisher.class));
     }
 }

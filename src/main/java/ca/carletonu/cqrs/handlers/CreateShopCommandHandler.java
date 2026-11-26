@@ -8,6 +8,7 @@ import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,19 +31,27 @@ public class CreateShopCommandHandler {
      */
     private final ObjectProvider<KafkaProducer> kafkaProducer;
 
+    /**
+     * The same event, published in process. This is what feeds the read model
+     * when there is no broker; see InProcessProjectionListener.
+     */
+    private final ApplicationEventPublisher events;
+
     public CreateShopCommandHandler(
             ShopRepository shopRepository,
             SellerRepository sellerRepository,
-            ObjectProvider<KafkaProducer> kafkaProducer) {
+            ObjectProvider<KafkaProducer> kafkaProducer,
+            ApplicationEventPublisher events) {
 
         this.shopRepository = shopRepository;
         this.sellerRepository = sellerRepository;
         this.kafkaProducer = kafkaProducer;
+        this.events = events;
     }
 
     /**
-     * Validates the command, saves the shop, and publishes a ShopCreatedEvent
-     * when a broker is configured.
+     * Validates the command, saves the shop, and publishes a ShopCreatedEvent:
+     * in process always, and to the broker as well when one is configured.
      *
      * @throws IllegalArgumentException if the command is not valid, or names a
      *                                  seller that does not exist
@@ -75,6 +84,10 @@ public class CreateShopCommandHandler {
                 savedShop.getType()
         );
 
+        // Published in process whatever the profile. Under "kafka" nothing
+        // here listens and the broker feeds the projection instead; without it
+        // this is the only route to the read model.
+        events.publishEvent(event);
         kafkaProducer.ifAvailable(producer -> producer.sendShopCreatedEvent(event));
 
         return savedShop;

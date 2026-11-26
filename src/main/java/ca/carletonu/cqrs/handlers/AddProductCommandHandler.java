@@ -11,6 +11,7 @@ import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ProductRepository;
 import ca.carletonu.models.repositories.ShopRepository;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -33,12 +34,20 @@ public class AddProductCommandHandler {
      */
     private final ObjectProvider<KafkaProducer> kafkaProducer;
 
+    /**
+     * The same event, published in process. This is what feeds the read model
+     * when there is no broker; see InProcessProjectionListener.
+     */
+    private final ApplicationEventPublisher events;
+
     public AddProductCommandHandler(ShopRepository shopRepository,
                                     ProductRepository productRepository,
-                                    ObjectProvider<KafkaProducer> kafkaProducer) {
+                                    ObjectProvider<KafkaProducer> kafkaProducer,
+                                    ApplicationEventPublisher events) {
         this.shopRepository = shopRepository;
         this.productRepository = productRepository;
         this.kafkaProducer = kafkaProducer;
+        this.events = events;
     }
 
     /**
@@ -72,6 +81,9 @@ public class AddProductCommandHandler {
         shop.addProduct(saved);
 
         ProductAddedEvent event = eventFor(shop.getId(), saved);
+        // Published in process whatever the profile, same as the shop-created
+        // event. See CreateShopCommandHandler.
+        events.publishEvent(event);
         kafkaProducer.ifAvailable(producer -> producer.sendProductAddedEvent(event));
 
         return saved;

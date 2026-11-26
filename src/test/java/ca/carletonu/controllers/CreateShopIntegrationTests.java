@@ -4,6 +4,7 @@ import ca.carletonu.models.Seller;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.readmodel.ShopSummaryRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,9 +42,17 @@ class CreateShopIntegrationTests {
     @Autowired
     private SellerRepository sellerRepository;
 
+    @Autowired
+    private ShopSummaryRepository shopSummaryRepository;
+
     @AfterEach
     void removeWhatThisTestMade() {
-        shopsNamed(MARKER).forEach(shopRepository::delete);
+        // The read model row too: creating a shop now projects one even with
+        // no broker running, so deleting only the shop would leave it orphaned.
+        shopsNamed(MARKER).forEach(shop -> {
+            shopSummaryRepository.findByShopId(shop.getId()).ifPresent(shopSummaryRepository::delete);
+            shopRepository.delete(shop);
+        });
     }
 
     @Test
