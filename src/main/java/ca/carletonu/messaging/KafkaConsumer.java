@@ -2,6 +2,7 @@ package ca.carletonu.messaging;
 
 import ca.carletonu.events.ProductAddedEvent;
 import ca.carletonu.events.CartItemAddedEvent;
+import ca.carletonu.events.CheckoutCompletedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,5 +55,18 @@ public class KafkaConsumer {
                 cartItemAddedEvent.productId(),
                 cartItemAddedEvent.quantityAdded(),
                 cartItemAddedEvent.lineQuantity());
+    }
+
+    /**
+     * Nothing projects orders yet. Logging them is what shows the flow
+     * working end to end.
+     */
+    @KafkaListener(topics = "checkout-completed", groupId = "mini-shopify-group")
+    public void consumeCheckoutCompleted(CheckoutCompletedEvent checkoutCompletedEvent) {
+        log.info("CheckoutCompletedEvent received: cartId={} customerId={} lines={} total={}",
+                checkoutCompletedEvent.cartId(),
+                checkoutCompletedEvent.customerId(),
+                checkoutCompletedEvent.lines().size(),
+                checkoutCompletedEvent.total());
     }
 }

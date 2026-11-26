@@ -26,7 +26,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -98,19 +97,21 @@ public class CartController {
     }
 
     /**
-     * Dispatches a CheckoutCommand for the shopper's open cart and sends them
-     * back to the cart page with a message saying what was bought, or why the
-     * checkout was refused.
+     * Dispatches a CheckoutCommand for the shopper's open cart. A successful
+     * checkout goes to its confirmation page; a refused one goes back to the
+     * cart page with the reason.
      */
     @PostMapping("/cart/checkout")
     public String checkout(RedirectAttributes redirectAttributes) {
         try {
             CheckoutResult result = checkoutCommandHandler.handle(new CheckoutCommand(currentCustomerId()));
-            redirectAttributes.addFlashAttribute("cartMessage", checkedOutMessage(result));
+            // A page of its own rather than a flash message, so the order can
+            // be seen again after a refresh.
+            return "redirect:/checkout/confirmation/" + result.cartId();
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("cartError", e.getMessage());
+            return "redirect:/cart";
         }
-        return "redirect:/cart";
     }
 
     /**
@@ -177,10 +178,5 @@ public class CartController {
         int total = line.getCart().getItemCount();
         return "Added " + quantity + " × " + line.getProduct().getName() + " to your cart. "
                 + "Cart has " + total + (total == 1 ? " item." : " items.");
-    }
-
-    private static String checkedOutMessage(CheckoutResult result) {
-        return "Checked out " + result.itemCount() + (result.itemCount() == 1 ? " item" : " items")
-                + " for $" + String.format(Locale.ROOT, "%.2f", result.total()) + ".";
     }
 }
