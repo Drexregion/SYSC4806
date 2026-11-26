@@ -21,6 +21,27 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
-# Start the app with --spring.profiles.active=kafka to use this broker.
-# Without that profile the app runs with no messaging at all, which is how
-# it runs on Azure.
+
+  postgres:
+    image: postgres:17
+    container_name: mini-shopify-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: minishopify
+      POSTGRES_USER: minishopify
+      POSTGRES_PASSWORD: minishopify
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minishopify -d minishopify"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+
+# Start the app with the kafka and postgres profiles to use these services.
+# The README has the full command. Without the profiles the app runs on
+# in-memory H2 with no messaging, and none of this needs to be running.
