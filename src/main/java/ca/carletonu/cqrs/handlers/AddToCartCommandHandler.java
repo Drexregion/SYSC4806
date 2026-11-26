@@ -30,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AddToCartCommandHandler {
 
+    static final String NO_CUSTOMER = "There is no customer account to add to yet.";
+
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final CartRepository cartRepository;
@@ -65,18 +67,20 @@ public class AddToCartCommandHandler {
      */
     @Transactional
     public CartItem handle(AddToCartCommand command) {
+        // Checked first, as the controller used to before this moved here, so
+        // a shopper with no account is told that rather than about the quantity.
+        if (command.customerId() == null) {
+            throw new IllegalArgumentException(NO_CUSTOMER);
+        }
         if (command.quantity() == null || command.quantity() <= 0) {
             throw new IllegalArgumentException("Choose a quantity of at least one.");
-        }
-        if (command.customerId() == null) {
-            throw new IllegalArgumentException("There is no customer account to add to.");
         }
         if (command.productId() == null) {
             throw new IllegalArgumentException("Choose a product to add.");
         }
 
         Customer customer = customerRepository.findById(command.customerId())
-                .orElseThrow(() -> new IllegalArgumentException("There is no customer account to add to."));
+                .orElseThrow(() -> new IllegalArgumentException(NO_CUSTOMER));
         Product product = productRepository.findById(command.productId())
                 .orElseThrow(() -> new ProductNotFoundException(command.productId()));
 

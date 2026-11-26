@@ -21,6 +21,11 @@ public class ChangeCartQuantityCommandHandler {
 
     @Transactional
     public void handle(ChangeCartQuantityCommand command) {
+        // First, as the controller used to check it, so a shopper with no
+        // account is told that rather than about the quantity.
+        if (command.customerId() == null) {
+            throw new IllegalArgumentException(RemoveFromCartCommandHandler.NO_CUSTOMER);
+        }
         if (command.quantity() == null || command.quantity() <= 0) {
             throw new IllegalArgumentException("Choose a quantity of at least one.");
         }
