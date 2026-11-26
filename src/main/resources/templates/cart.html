@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your cart - Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a th:href="@{/shops}">All shops</a>
+            <a th:href="@{/catalogue}">Catalogue</a>
+            <a th:href="@{/cart}">Cart</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    <h1>Your cart</h1>
+
+    <div th:replace="~{fragments/cart-notice :: cartNotice}"></div>
+
+    <p class="empty" th:if="${#lists.isEmpty(lines)}">
+        Your cart is empty. <a th:href="@{/shops}">Browse shops</a>
+    </p>
+
+    <th:block th:unless="${#lists.isEmpty(lines)}">
+        <table class="cart-table">
+            <thead>
+            <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Unit price</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Line total</th>
+                <th scope="col"><span class="visually-hidden">Remove</span></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="cart-line" th:each="line : ${lines}" th:with="product=${line.product}">
+                <td data-label="Product">
+                    <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product name</a>
+                </td>
+                <td data-label="Unit price"
+                    th:text="|$${#numbers.formatDecimal(product.price ?: 0, 1, 'COMMA', 2, 'POINT')}|">$0.00</td>
+                <td data-label="Quantity">
+                    <form class="cart-quantity" method="post"
+                          th:action="@{/cart/items/{id}/quantity(id=${product.id})}">
+                        <input name="quantity" type="number" min="1" required
+                               th:value="${line.quantity}"
+                               th:max="${product instanceof T(ca.carletonu.models.Item) ? product.quantity : null}"
+                               th:aria-label="|Quantity of ${product.name}|">
+                        <button class="button" type="submit">Update</button>
+                    </form>
+                </td>
+                <td class="cart-line-total" data-label="Line total"
+                    th:text="|$${#numbers.formatDecimal(line.subtotal, 1, 'COMMA', 2, 'POINT')}|">$0.00</td>
+                <td>
+                    <form method="post" th:action="@{/cart/items/{id}/remove(id=${product.id})}">
+                        <button class="button button-quiet" type="submit"
+                                th:aria-label="|Remove ${product.name}|">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <p class="cart-total">
+            Total <strong th:text="|$${#numbers.formatDecimal(total, 1, 'COMMA', 2, 'POINT')}|">$0.00</strong>
+        </p>
+    </th:block>
+</main>
+
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
+</body>
+</html>
