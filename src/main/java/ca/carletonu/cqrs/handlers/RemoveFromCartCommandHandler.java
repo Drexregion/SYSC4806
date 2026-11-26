@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RemoveFromCartCommandHandler {
 
+    /** Shared with ChangeCartQuantityCommandHandler: both change the cart on the cart page. */
+    static final String NO_CUSTOMER = "There is no customer account with a cart yet.";
+
     private final CartRepository cartRepository;
 
     public RemoveFromCartCommandHandler(CartRepository cartRepository) {
@@ -20,6 +23,10 @@ public class RemoveFromCartCommandHandler {
 
     @Transactional
     public void handle(RemoveFromCartCommand command) {
+        if (command.customerId() == null) {
+            throw new IllegalArgumentException(NO_CUSTOMER);
+        }
+
         Cart cart = cartRepository.findByCustomerIdAndStatus(command.customerId(), CartStatus.OPEN)
                 .orElseThrow(() -> new IllegalArgumentException("That product is not in your cart."));
         Product product = cart.getItems().stream()

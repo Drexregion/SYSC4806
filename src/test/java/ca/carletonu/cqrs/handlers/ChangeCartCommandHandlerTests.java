@@ -123,6 +123,23 @@ class ChangeCartCommandHandlerTests {
         verify(cartRepository, never()).save(any());
     }
 
+    @Test
+    void noCustomerIsRefusedBeforeTheQuantityIsChecked() {
+        // The controller passes a null customer when there is no shopper to stand in
+        assertThatThrownBy(() -> changeHandler.handle(new ChangeCartQuantityCommand(null, LAMP_ID, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("There is no customer account with a cart yet.");
+        verify(cartRepository, never()).save(any());
+    }
+
+    @Test
+    void noCustomerCannotRemove() {
+        assertThatThrownBy(() -> removeHandler.handle(new RemoveFromCartCommand(null, LAMP_ID)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("There is no customer account with a cart yet.");
+        verify(cartRepository, never()).save(any());
+    }
+
     private void change(long productId, Integer quantity) {
         changeHandler.handle(new ChangeCartQuantityCommand(CUSTOMER_ID, productId, quantity));
     }

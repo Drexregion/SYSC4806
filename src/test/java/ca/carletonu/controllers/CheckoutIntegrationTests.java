@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Checkout over real HTTP, the path a shopper takes: add to the cart, check
- * out, land back on a page that says what happened.
+ * out, land back on the cart page with a message saying what happened.
  *
  * The shopper is whoever CurrentCustomer stands in, the demo customer the
  * seeder writes. Each test empties that customer's carts before and after.
@@ -83,42 +83,27 @@ class CheckoutIntegrationTests {
         addToCart(lamp, 2);
         addToCart(rewiring, 1);
 
-        String cookie = sessionCookieFrom(checkout(null)
+        String cookie = sessionCookieFrom(checkout()
                 .expectStatus().is3xxRedirection()
-                .expectHeader().valueMatches("Location", ".*/$"));
+                .expectHeader().valueMatches("Location", ".*/cart$"));
 
         assertThat(cartRepository.findOpenCart(shopper)).isEmpty();
         assertThat(cartsOf(shopper)).singleElement()
                 .satisfies(cart -> assertThat(cart.isOpen()).isFalse());
         assertThat(stockOf(lamp)).isEqualTo(1);
 
-        assertThat(page("/", cookie)).contains("Checked out 3 items for $223.00.");
-    }
-
-    @Test
-    void checkingOutReturnsToThePageItCameFrom() {
-        addToCart(lamp, 1);
-
-        checkout("/shops/" + shop.getId())
-                .expectStatus().is3xxRedirection()
-                .expectHeader().valueMatches("Location", ".*/shops/" + shop.getId() + "$");
-    }
-
-    @Test
-    void anOutsideReturnAddressIsIgnored() {
-        addToCart(lamp, 1);
-
-        checkout("https://example.com/elsewhere")
-                .expectStatus().is3xxRedirection()
-                .expectHeader().valueMatches("Location", ".*/$");
+        // The cart page now shows no lines, since the open cart is gone
+        assertThat(page("/cart", cookie))
+                .contains("Checked out 3 items for $223.00.")
+                .doesNotContain("Checkout Test Lamp");
     }
 
     @Test
     void anEmptyCartIsRefusedWithAMessageAndWritesNothing() {
-        String cookie = sessionCookieFrom(checkout(null));
+        String cookie = sessionCookieFrom(checkout());
 
         assertThat(cartsOf(shopper)).isEmpty();
-        assertThat(page("/", cookie)).contains("Your cart is empty.");
+        assertThat(page("/cart", cookie)).contains("Your cart is empty.");
     }
 
     @Test
@@ -130,18 +115,20 @@ class CheckoutIntegrationTests {
         stored.setQuantity(1);
         productRepository.save(stored);
 
-        String cookie = sessionCookieFrom(checkout("/products/" + lamp.getId()));
+        String cookie = sessionCookieFrom(checkout());
 
         assertThat(cartRepository.findOpenCart(shopper)).isPresent();
         assertThat(stockOf(lamp)).isEqualTo(1);
-        assertThat(page("/products/" + lamp.getId(), cookie))
-                .contains("Your cart has more than is in stock: only 1 of Checkout Test Lamp left.");
+        // Still on the cart page with the line, so the shopper can lower it
+        assertThat(page("/cart", cookie))
+                .contains("Your cart has more than is in stock: only 1 of Checkout Test Lamp left.")
+                .contains("Checkout Test Lamp");
     }
 
     @Test
     void afterCheckingOutTheNextAddOpensANewCart() {
         addToCart(lamp, 1);
-        checkout(null).expectStatus().is3xxRedirection();
+        checkout().expectStatus().is3xxRedirection();
 
         addToCart(lamp, 1);
 
@@ -161,15 +148,10 @@ class CheckoutIntegrationTests {
                 .expectStatus().is3xxRedirection();
     }
 
-    private RestTestClient.ResponseSpec checkout(String returnTo) {
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        if (returnTo != null) {
-            form.add("returnTo", returnTo);
-        }
-
+    private RestTestClient.ResponseSpec checkout() {
         return client.post().uri("/cart/checkout")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
+                .body(new LinkedMultiValueMap<String, String>())
                 .exchange();
     }
 
