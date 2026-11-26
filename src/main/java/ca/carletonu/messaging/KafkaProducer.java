@@ -2,6 +2,7 @@ package ca.carletonu.messaging;
 
 import ca.carletonu.events.ProductAddedEvent;
 import ca.carletonu.events.CartItemAddedEvent;
+import ca.carletonu.events.CheckoutCompletedEvent;
 import ca.carletonu.events.ShopCreatedEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -24,6 +25,7 @@ public class KafkaProducer {
     private static final String PRODUCT_ADDED_TOPIC = "product-added";
 
     private static final String CART_ITEM_ADDED_TOPIC = "cart-item-added";
+    private static final String CHECKOUT_COMPLETED_TOPIC = "checkout-completed";
 
     /** Object rather than one event type, so one template sends every event. */
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -48,5 +50,11 @@ public class KafkaProducer {
         this.kafkaTemplate.send(CART_ITEM_ADDED_TOPIC,
                 cartItemAddedEvent.customerId().toString(),
                 cartItemAddedEvent);
+    }
+
+    public void sendCheckoutCompletedEvent(CheckoutCompletedEvent checkoutCompletedEvent) {
+        this.kafkaTemplate.send(CHECKOUT_COMPLETED_TOPIC,
+                checkoutCompletedEvent.customerId().toString(),
+                checkoutCompletedEvent);
     }
 }

@@ -20,6 +20,23 @@ public class Transaction {
     @Id
     private Long id;
 
+    /**
+     * The checked-out cart this purchase came from, so one order's rows can be
+     * found together. Null for rows not written by checkout.
+     */
+    @Column(name = "cart_id")
+    private Long cartId;
+
+    /**
+     * How many were bought. A wrapper, not an int: an int maps to a NOT NULL
+     * column, which Postgres refuses to add to a table that already has rows
+     * when the schema is updated in place on Azure.
+     */
+    private Integer quantity;
+
+    /** The price paid for one, kept so a later price change does not rewrite history. */
+    private Double unitPrice;
+
     public Customer getCustomer() {
         return customer;
     }
@@ -50,8 +67,25 @@ public class Transaction {
         this.customer = customer;
     }
 
+    /**
+     * A purchase made at checkout: one cart line, recorded when it was bought.
+     */
+    public Transaction(Long cartId, Shop shop, Product product, Customer customer,
+                       int quantity, Double unitPrice) {
+        this(shop, product, customer);
+        this.cartId = cartId;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+        this.date = new Date();
+    }
+
     public Transaction() {}
 
+    /**
+     * Checkout does not use this. It removes the product from the shop's
+     * product list, which would delist the product after one sale, and it
+     * does not touch stock. Checkout builds its Transactions directly.
+     */
     public boolean buy(Product product) {
         if (this.shop.getProducts().contains(product)) {
             this.shop.getProducts().remove(product);
@@ -71,6 +105,23 @@ public class Transaction {
      */
     public Date getDate() {
         return date;
+    }
+
+    public Long getCartId() {
+        return cartId;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public Double getUnitPrice() {
+        return unitPrice;
+    }
+
+    /** Unit price times quantity, or zero when either is missing, like CartItem. */
+    public double getSubtotal() {
+        return unitPrice == null || quantity == null ? 0 : unitPrice * quantity;
     }
 
 //    public boolean refund(Product product) {
