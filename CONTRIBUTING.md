@@ -48,6 +48,47 @@ On top of the two approvals, each area has an owner who should be one of them:
 | Tests, on every pull request | Bomi |
 | Build, CI and deployment | Divine |
 
+## Writing tests
+
+Whoever writes a feature writes its tests. Pick the smallest kind that covers
+what you changed:
+
+| You are testing | Use |
+|---|---|
+| A model or one class on its own | Plain JUnit, no annotation |
+| A repository query or mapping | `@RepositoryTest` |
+| A page or endpoint over HTTP | `@IntegrationTest` |
+| Anything that travels through Kafka | `@KafkaIntegrationTest` |
+
+Use these instead of `@DataJpaTest` and `@SpringBootTest`. Name the class
+`...Tests` so Maven runs it.
+
+**Database state.** Every `@IntegrationTest` method starts with an empty
+database, and every `@RepositoryTest` method is rolled back. So:
+
+- Create the rows your test needs. Do not rely on the demo data or on another test.
+- Do not write clean-up code such as `deleteAll()`. It is done for you, for every
+  table, including ones you add later.
+- Run one test class on its own as well as the whole suite. Both have to pass.
+
+**Asynchronous read models.** An event reaches the read model on another thread,
+so an assertion straight after the write races it. `@KafkaIntegrationTest` starts
+a real broker inside the test (no Docker needed) and gives you two ways to wait:
+
+```java
+// Something should appear: retry until it does, and read inside the lambda
+eventually(() -> assertThat(cataloguePage()).contains("Ember"));
+
+// Something should NOT appear, or not twice: let every event finish first
+events.awaitProcessed();
+assertThat(shopSummaryRepository.count()).isZero();
+```
+
+Never use `Thread.sleep`, and never use `eventually` for something that should be
+absent: it passes on the first attempt. `ShopSummaryKafkaTests` is the example to
+copy. Logic inside a projection does not need Kafka; call the projection directly,
+as `ShopSummaryProjectionTests` does.
+
 ## Issues and the board
 
 Every piece of work has an issue. Move your card to **In Progress** before you

@@ -6,17 +6,15 @@ import ca.carletonu.models.Service;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class ShopControllerTests {
 
     @Autowired
@@ -78,7 +76,6 @@ class ShopControllerTests {
 
     @Test
     void landingPageLinksToTheShopPage() {
-        shopRepository.deleteAll();
         Shop shop = shopRepository.save(new Shop("Fernhill Plants", "Houseplants", "Garden", null));
 
         String landing = client.get().uri("/")
