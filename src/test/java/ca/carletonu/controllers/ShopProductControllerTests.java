@@ -5,10 +5,9 @@ import ca.carletonu.models.Product;
 import ca.carletonu.models.Service;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -23,8 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for adding products to a shop, driven over real
  * HTTP against the running application.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class ShopProductControllerTests {
 
     @Autowired

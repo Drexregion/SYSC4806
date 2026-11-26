@@ -13,4 +13,7 @@ public interface TransactionRepository extends CrudRepository<Transaction, Long>
      * record of a purchase, so this replaces the old Customer.transactionHistory strings.
      */
     List<Transaction> findByCustomerOrderByDateDesc(Customer customer);
+
+    /** One checkout's rows, in the order they were written. */
+    List<Transaction> findByCartIdOrderByIdAsc(Long cartId);
 }

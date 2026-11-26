@@ -2,9 +2,12 @@ package ca.carletonu.controllers;
 
 import ca.carletonu.cqrs.commands.AddToCartCommand;
 import ca.carletonu.cqrs.commands.ChangeCartQuantityCommand;
+import ca.carletonu.cqrs.commands.CheckoutCommand;
 import ca.carletonu.cqrs.commands.RemoveFromCartCommand;
 import ca.carletonu.cqrs.handlers.AddToCartCommandHandler;
 import ca.carletonu.cqrs.handlers.ChangeCartQuantityCommandHandler;
+import ca.carletonu.cqrs.handlers.CheckoutCommandHandler;
+import ca.carletonu.cqrs.handlers.CheckoutResult;
 import ca.carletonu.cqrs.handlers.ProductNotFoundException;
 import ca.carletonu.cqrs.handlers.RemoveFromCartCommandHandler;
 import ca.carletonu.models.Cart;
@@ -24,15 +27,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 /**
- * Lets the shopper put products in their cart, see it, and change it.
+ * Lets the shopper put products in their cart, see it, change it, and check
+ * it out.
  *
  * The controller does no business logic of its own: it turns the submitted
  * form into a command, hands it to the handler, and decides where to send the
- * shopper next.
+ * shopper next. Every rule, including having a customer at all, is the
+ * handler's; a refusal comes back as an IllegalArgumentException whose
+ * message is shown on the page.
  */
 @Controller
 public class CartController {
@@ -49,17 +54,20 @@ public class CartController {
     private final AddToCartCommandHandler addToCartCommandHandler;
     private final ChangeCartQuantityCommandHandler changeCartQuantityCommandHandler;
     private final RemoveFromCartCommandHandler removeFromCartCommandHandler;
+    private final CheckoutCommandHandler checkoutCommandHandler;
 
     public CartController(CurrentCustomer currentCustomer,
                           CartRepository cartRepository,
                           AddToCartCommandHandler addToCartCommandHandler,
                           ChangeCartQuantityCommandHandler changeCartQuantityCommandHandler,
-                          RemoveFromCartCommandHandler removeFromCartCommandHandler) {
+                          RemoveFromCartCommandHandler removeFromCartCommandHandler,
+                          CheckoutCommandHandler checkoutCommandHandler) {
         this.currentCustomer = currentCustomer;
         this.cartRepository = cartRepository;
         this.addToCartCommandHandler = addToCartCommandHandler;
         this.changeCartQuantityCommandHandler = changeCartQuantityCommandHandler;
         this.removeFromCartCommandHandler = removeFromCartCommandHandler;
+        this.checkoutCommandHandler = checkoutCommandHandler;
     }
 
     @GetMapping("/cart")
@@ -77,26 +85,42 @@ public class CartController {
     public String changeQuantity(@PathVariable Long productId,
                                  @RequestParam(required = false) Integer quantity,
                                  RedirectAttributes redirectAttributes) {
-        return changeCart(redirectAttributes, "Cart updated.", customer ->
+        return changeCart(redirectAttributes, "Cart updated.", () ->
                 changeCartQuantityCommandHandler.handle(
-                        new ChangeCartQuantityCommand(customer.getId(), productId, quantity)));
+                        new ChangeCartQuantityCommand(currentCustomerId(), productId, quantity)));
     }
 
     @PostMapping("/cart/items/{productId}/remove")
     public String remove(@PathVariable Long productId, RedirectAttributes redirectAttributes) {
-        return changeCart(redirectAttributes, "Removed from your cart.", customer ->
-                removeFromCartCommandHandler.handle(new RemoveFromCartCommand(customer.getId(), productId)));
+        return changeCart(redirectAttributes, "Removed from your cart.", () ->
+                removeFromCartCommandHandler.handle(new RemoveFromCartCommand(currentCustomerId(), productId)));
     }
 
-    private String changeCart(RedirectAttributes redirectAttributes, String message, Consumer<Customer> change) {
-        Optional<Customer> customer = currentCustomer.find();
-        if (customer.isEmpty()) {
-            redirectAttributes.addFlashAttribute("cartError", "There is no customer account with a cart yet.");
+    /**
+     * Dispatches a CheckoutCommand for the shopper's open cart. A successful
+     * checkout goes to its confirmation page; a refused one goes back to the
+     * cart page with the reason.
+     */
+    @PostMapping("/cart/checkout")
+    public String checkout(RedirectAttributes redirectAttributes) {
+        try {
+            CheckoutResult result = checkoutCommandHandler.handle(new CheckoutCommand(currentCustomerId()));
+            // A page of its own rather than a flash message, so the order can
+            // be seen again after a refresh.
+            return "redirect:/checkout/confirmation/" + result.cartId();
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("cartError", e.getMessage());
             return "redirect:/cart";
         }
+    }
 
+    /**
+     * Runs a change from the cart page and lands back on it, with the message
+     * on success or the handler's reason on refusal.
+     */
+    private String changeCart(RedirectAttributes redirectAttributes, String message, Runnable change) {
         try {
-            change.accept(customer.get());
+            change.run();
             redirectAttributes.addFlashAttribute("cartMessage", message);
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("cartError", e.getMessage());
@@ -118,17 +142,9 @@ public class CartController {
                             @RequestParam(defaultValue = "1") Integer quantity,
                             @RequestParam(required = false) String returnTo,
                             RedirectAttributes redirectAttributes) {
-        String back = "redirect:" + returnPath(returnTo, productId);
-
-        Optional<Customer> customer = currentCustomer.find();
-        if (customer.isEmpty()) {
-            redirectAttributes.addFlashAttribute("cartError", "There is no customer account to add to yet.");
-            return back;
-        }
-
         try {
             CartItem line = addToCartCommandHandler.handle(
-                    new AddToCartCommand(customer.get().getId(), productId, quantity));
+                    new AddToCartCommand(currentCustomerId(), productId, quantity));
             redirectAttributes.addFlashAttribute("cartMessage", addedMessage(line, quantity));
         } catch (ProductNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -136,7 +152,15 @@ public class CartController {
             redirectAttributes.addFlashAttribute("cartError", e.getMessage());
         }
 
-        return back;
+        return "redirect:" + returnPath(returnTo, productId);
+    }
+
+    /**
+     * The shopper's id, or null when there is no customer to stand in. Null
+     * goes to the handler like any other value, and the handler refuses it.
+     */
+    private Long currentCustomerId() {
+        return currentCustomer.find().map(Customer::getId).orElse(null);
     }
 
     /**

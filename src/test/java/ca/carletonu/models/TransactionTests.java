@@ -77,4 +77,36 @@ class TransactionTests {
         assertThat(transaction.getProduct()).isSameAs(lamp);
         assertThat(transaction.getCustomer()).isSameAs(customer);
     }
+
+    @Test
+    void aCheckoutPurchaseRecordsItsCartQuantityPriceAndDate() {
+        Transaction transaction = new Transaction(7L, shop, lamp, customer, 3, 89.0);
+
+        assertThat(transaction.getCartId()).isEqualTo(7L);
+        assertThat(transaction.getShop()).isSameAs(shop);
+        assertThat(transaction.getProduct()).isSameAs(lamp);
+        assertThat(transaction.getCustomer()).isSameAs(customer);
+        assertThat(transaction.getQuantity()).isEqualTo(3);
+        assertThat(transaction.getUnitPrice()).isEqualTo(89.0);
+        assertThat(transaction.getDate()).isNotNull();
+    }
+
+    @Test
+    void aCheckoutPurchaseLeavesTheShopsProductsAlone() {
+        new Transaction(7L, shop, lamp, customer, 1, 89.0);
+
+        // Unlike buy(), which takes the product off the shop
+        assertThat(shop.getProducts()).containsExactly(lamp);
+    }
+
+    @Test
+    void theSubtotalIsUnitPriceTimesQuantity() {
+        assertThat(new Transaction(7L, shop, lamp, customer, 3, 89.0).getSubtotal()).isEqualTo(267.0);
+    }
+
+    @Test
+    void aMissingPriceOrQuantityGivesASubtotalOfZero() {
+        assertThat(new Transaction(7L, shop, lamp, customer, 3, null).getSubtotal()).isZero();
+        assertThat(new Transaction(shop, lamp, customer).getSubtotal()).isZero();
+    }
 }

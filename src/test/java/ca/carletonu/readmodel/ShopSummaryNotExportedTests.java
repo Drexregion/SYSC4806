@@ -2,8 +2,7 @@ package ca.carletonu.readmodel;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -20,8 +19,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
  * asserted here is the one named in the annotation, so if the repository were
  * exported again both of these would return 200 instead of 404.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class ShopSummaryNotExportedTests {
 
     private static final String ENDPOINT = "/api/shop-summaries";

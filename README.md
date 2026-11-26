@@ -136,12 +136,15 @@ discriminator column.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | bigint | primary key, generated |
-| `date` | timestamp | |
+| `date` | timestamp | set when the purchase is made |
 | `shop_id` | bigint | FK → `SHOP.id` |
 | `product_id` | bigint | FK → `PRODUCT.id` |
 | `customer_id` | bigint | FK → `PERSON.id` |
+| `cart_id` | bigint | the checked-out cart the purchase came from, so one order's rows can be found together; null for rows not written by checkout |
+| `quantity` | integer | how many were bought; nullable so the column can be added to an existing table (#42) |
+| `unit_price` | double | the price paid for one at checkout, kept even if the product's price changes later |
 
-`TRANSACTION` is the only record of a purchase. A customer's purchase history is
+Checkout writes one row per cart line (#42). `TRANSACTION` is the only record of a purchase. A customer's purchase history is
 `TransactionRepository.findByCustomerOrderByDateDesc(customer)`; `Customer` stores no copy of it (#48).
 ### `CART`
 
@@ -200,7 +203,7 @@ Product ─┬─< Item      (quantity, productType)
 
 - JDK 21
 - Maven 3.9+
-- Docker, only for the Kafka event flow
+- Docker, only for Kafka and Postgres
 ### Locally
 
 ```bash
@@ -209,15 +212,35 @@ mvn spring-boot:run
 
 Then http://localhost:8080. Seed data loads automatically when the shop table is empty.
 
-### With the Kafka event flow
+### With Kafka and Postgres
+
+`docker-compose.yml` runs every dependency the app can use: a Kafka broker and a PostgreSQL database.
 
 ```bash
 docker compose up -d
-mvn spring-boot:run -Dspring-boot.run.profiles=kafka
 ```
 
+Then start the app against them:
+
+```bash
+DB_URL=jdbc:postgresql://localhost:5433/minishopify DB_USER=minishopify DB_PASSWORD=minishopify \
+  mvn spring-boot:run -Dspring-boot.run.profiles=kafka,postgres
+```
+
+Postgres is published on port 5433 so it does not clash with a Postgres already installed on 5432.
+The database login is for local use only and is not the one Azure uses. Data is kept in the
+`postgres-data` volume, so it survives restarts. To stop everything:
+
+```bash
+docker compose down
+```
+
+Add `-v` to also delete the stored data. Either profile can be used alone: `kafka` on its own keeps
+H2, and `postgres` on its own runs with no messaging.
+
 Without the `kafka` profile the messaging beans are not created and the application runs with no broker,
-which is how it runs on Azure. Shops are still created, the event is simply not published.
+which is how it runs on Azure. Shops are still created, the event is simply not published. With no
+profiles at all the app needs nothing from compose.
 
 ### Tests
 

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order placed - Mini-Shopify</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}">Mini-Shopify</a>
+        <nav class="site-nav">
+            <a th:href="@{/}">Home</a>
+            <a th:href="@{/shops}">All shops</a>
+            <a th:href="@{/catalogue}">Catalogue</a>
+            <a th:href="@{/cart}">Cart</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    <h1>Thanks, your order is placed</h1>
+    <p class="muted"
+       th:text="|Order ${orderId} · ${itemCount} ${itemCount == 1 ? 'item' : 'items'} · no payment was taken, this is a simulated checkout.|">
+        Order 1 · 0 items · no payment was taken, this is a simulated checkout.
+    </p>
+
+    <table class="cart-table">
+        <thead>
+        <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Shop</th>
+            <th scope="col">Unit price</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Line total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="order-line" th:each="purchase : ${purchases}">
+            <td data-label="Product">
+                <a th:href="@{/products/{id}(id=${purchase.product.id})}" th:text="${purchase.product.name}">Product</a>
+            </td>
+            <td data-label="Shop">
+                <a th:href="@{/shops/{id}(id=${purchase.shop.id})}" th:text="${purchase.shop.name}">Shop</a>
+            </td>
+            <td data-label="Unit price"
+                th:text="|$${#numbers.formatDecimal(purchase.unitPrice ?: 0, 1, 'COMMA', 2, 'POINT')}|">$0.00</td>
+            <td data-label="Quantity" th:text="${purchase.quantity}">1</td>
+            <td class="cart-line-total" data-label="Line total"
+                th:text="|$${#numbers.formatDecimal(purchase.subtotal, 1, 'COMMA', 2, 'POINT')}|">$0.00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p class="cart-total">
+        Total <strong th:text="|$${#numbers.formatDecimal(total, 1, 'COMMA', 2, 'POINT')}|">$0.00</strong>
+    </p>
+
+    <p><a class="button" th:href="@{/shops}">Keep shopping</a></p>
+</main>
+
+<footer class="site-footer">
+    <div class="container">SYSC 4806 term project, Carleton University</div>
+</footer>
+</body>
+</html>

@@ -5,10 +5,9 @@ import ca.carletonu.models.Item;
 import ca.carletonu.models.Service;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
-import org.junit.jupiter.api.AfterEach;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,10 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the app runs on Azure, and for the demo data, which goes straight to the
  * repository. Without it both pages would be empty on the deployed site.
  *
- * The shops here use names nothing else uses, so rows left in the shared
- * in-memory database by other tests cannot be mistaken for them.
+ * Each test starts with an empty database, so the only rows the backfill can
+ * see are the ones the test just wrote.
  */
-@SpringBootTest
+@IntegrationTest
 class ShopSummaryBackfillTests {
 
     private static final String MARKER = "Quillfeather Bindery";
@@ -35,16 +34,6 @@ class ShopSummaryBackfillTests {
 
     @Autowired
     private ShopSummaryBackfill backfill;
-
-    @AfterEach
-    void removeWhatThisTestMade() {
-        shopRepository.findByNameContainingIgnoreCaseOrTypeContainingIgnoreCase(MARKER, MARKER)
-                .forEach(shop -> {
-                    shopSummaryRepository.findByShopId(shop.getId())
-                            .ifPresent(shopSummaryRepository::delete);
-                    shopRepository.delete(shop);
-                });
-    }
 
     @Test
     void aShopWithNoEventBehindItStillReachesTheCatalogue() {

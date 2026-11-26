@@ -4,19 +4,15 @@ import ca.carletonu.models.Item;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
 import ca.carletonu.readmodel.ShopSummaryBackfill;
-import ca.carletonu.readmodel.ShopSummaryRepository;
-import org.junit.jupiter.api.BeforeEach;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class AllShopsPageTests {
 
     @Autowired
@@ -26,20 +22,7 @@ class AllShopsPageTests {
     private ShopRepository shopRepository;
 
     @Autowired
-    private ShopSummaryRepository shopSummaryRepository;
-
-    @Autowired
     private ShopSummaryBackfill backfill;
-
-    /**
-     * The catalogue is a separate table, so emptying the shops alone would
-     * leave their summaries behind and the page would still list them.
-     */
-    @BeforeEach
-    void clearShopsAndCatalogue() {
-        shopRepository.deleteAll();
-        shopSummaryRepository.deleteAll();
-    }
 
     @Test
     void showsEmptyStateWhenThereAreNoShops() {

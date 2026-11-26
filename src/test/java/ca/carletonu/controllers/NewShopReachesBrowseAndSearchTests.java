@@ -7,11 +7,9 @@ import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
 import ca.carletonu.readmodel.ShopSummaryRepository;
-import org.junit.jupiter.api.AfterEach;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.util.LinkedMultiValueMap;
@@ -33,8 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * because the backfill only runs once at startup. A merchant could create a
  * shop and never find it by browsing or searching.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class NewShopReachesBrowseAndSearchTests {
 
     private static final String MARKER = "Thornwick Bellfounders";
@@ -54,14 +51,6 @@ class NewShopReachesBrowseAndSearchTests {
 
     @Autowired
     private AddProductCommandHandler addProductCommandHandler;
-
-    @AfterEach
-    void removeWhatThisTestMade() {
-        shopsNamed(MARKER).forEach(shop -> {
-            shopSummaryRepository.findByShopId(shop.getId()).ifPresent(shopSummaryRepository::delete);
-            shopRepository.delete(shop);
-        });
-    }
 
     @Test
     void aShopCreatedWithNoBrokerRunningStillShowsUpInBrowse() {

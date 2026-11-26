@@ -1,13 +1,10 @@
 package ca.carletonu.data;
 
-import ca.carletonu.models.repositories.SellerRepository;
 import ca.carletonu.models.repositories.ShopRepository;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import ca.carletonu.readmodel.ShopSummaryBackfill;
+import ca.carletonu.testsupport.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,13 +12,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Covers the startup demo data: that it writes something, that restarting
  * does not duplicate it, and that what it writes is enough to demonstrate the
- * browse and search pages.
- *
- * Clears the shop table before and after each test so this class leaves the
- * shared database the way it found it.
+ * browse and search pages. Each test starts with an empty database, so it
+ * seeds for itself.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureRestTestClient
+@IntegrationTest
 class DemoDataSeederTests {
 
     @Autowired
@@ -31,22 +25,10 @@ class DemoDataSeederTests {
     private ShopRepository shopRepository;
 
     @Autowired
-    private SellerRepository sellerRepository;
-
-    @Autowired
     private DemoDataSeeder seeder;
 
-    @BeforeEach
-    void clear() {
-        shopRepository.deleteAll();
-        sellerRepository.deleteAll();
-    }
-
-    @AfterEach
-    void clearAgain() {
-        shopRepository.deleteAll();
-        sellerRepository.deleteAll();
-    }
+    @Autowired
+    private ShopSummaryBackfill backfill;
 
     @Test
     void seedsEnoughShopsToFillTheLandingPage() {
@@ -87,7 +69,7 @@ class DemoDataSeederTests {
 
     @Test
     void seededShopsCanBeFoundByName() {
-        seeder.seed();
+        seedAndProject();
 
         assertThat(getPage("/shops/search?q=fernhill"))
                 .contains("Fernhill Plants")
@@ -96,7 +78,7 @@ class DemoDataSeederTests {
 
     @Test
     void seededShopsCanBeFoundByCategory() {
-        seeder.seed();
+        seedAndProject();
 
         assertThat(getPage("/shops/search?q=stationery"))
                 .contains("Quiet Quill");
@@ -121,6 +103,17 @@ class DemoDataSeederTests {
                 .contains("24 in stock")
                 .contains("Out of stock")
                 .contains("60 min service");
+    }
+
+    /**
+     * Search reads the catalogue, and the seeder writes straight to the
+     * repository with no event behind it, so the catalogue would not know
+     * about these shops. The application runs the backfill immediately after
+     * the seeder at startup; these tests do the same thing in the same order.
+     */
+    private void seedAndProject() {
+        seeder.seed();
+        backfill.backfill();
     }
 
     private String shopUrl(String shopName) {

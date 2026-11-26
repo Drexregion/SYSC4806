@@ -171,7 +171,18 @@ class AddToCartCommandHandlerTests {
     void anUnknownCustomerIsRefused() {
         assertThatThrownBy(() -> handler.handle(new AddToCartCommand(999L, LAMP_ID, 1)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("There is no customer account to add to.");
+                .hasMessage("There is no customer account to add to yet.");
+
+        verify(cartRepository, never()).save(any());
+    }
+
+    @Test
+    void noCustomerIsRefusedBeforeTheQuantityIsChecked() {
+        // The controller passes a null customer when there is no shopper to
+        // stand in; that is the message the shopper should see, whatever the quantity
+        assertThatThrownBy(() -> handler.handle(new AddToCartCommand(null, LAMP_ID, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("There is no customer account to add to yet.");
 
         verify(cartRepository, never()).save(any());
     }
