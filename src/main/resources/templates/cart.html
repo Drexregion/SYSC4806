@@ -71,6 +71,13 @@
         <p class="cart-total">
             Total <strong th:text="|$${#numbers.formatDecimal(total, 1, 'COMMA', 2, 'POINT')}|">$0.00</strong>
         </p>
+
+        <!--/* Inside the non-empty block, so an empty cart has no button. Stock is
+               checked again when the order is placed, since adding does not reserve it. */-->
+        <form class="checkout-form" th:action="@{/cart/checkout}" method="post">
+            <button class="button" type="submit">Place order</button>
+            <p class="muted">This is a simulated checkout. No payment is taken.</p>
+        </form>
     </th:block>
 </main>
 

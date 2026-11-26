@@ -161,16 +161,17 @@ single-table-per-hierarchy with a `DTYPE` discriminator column.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | bigint | primary key, generated |
-| `date` | timestamp | |
-| `shop_id` | bigint | FK to `SHOP.id` |
-| `product_id` | bigint | FK to `PRODUCT.id` |
-| `customer_id` | bigint | FK to `PERSON.id` |
+| `date` | timestamp | set when the purchase is made |
+| `shop_id` | bigint | FK → `SHOP.id` |
+| `product_id` | bigint | FK → `PRODUCT.id` |
+| `customer_id` | bigint | FK → `PERSON.id` |
+| `cart_id` | bigint | the checked-out cart the purchase came from, so one order's rows can be found together; null for rows not written by checkout |
+| `quantity` | integer | how many were bought; nullable so the column can be added to an existing table (#42) |
+| `unit_price` | double | the price paid for one at checkout, kept even if the product's price changes later |
 
-`TRANSACTION` is the only record of a purchase. A customer's purchase history is
-`TransactionRepository.findByCustomerOrderByDateDesc(customer)`. `Customer` stores no copy of it, which
-is what #48 removed.
-
-#### `CART`
+Checkout writes one row per cart line (#42). `TRANSACTION` is the only record of a purchase. A customer's purchase history is
+`TransactionRepository.findByCustomerOrderByDateDesc(customer)`; `Customer` stores no copy of it (#48).
+### `CART`
 
 | Column | Type | Notes |
 |---|---|---|

@@ -153,6 +153,22 @@ class CartPageIntegrationTests {
                 .value(body -> assertThat(body).contains("href=\"/cart\""));
     }
 
+    @Test
+    void aCartWithLinesOffersPlaceOrder() {
+        add(lamp, 1);
+
+        assertThat(cartPage(null))
+                .contains("action=\"/cart/checkout\"")
+                .contains("Place order");
+    }
+
+    @Test
+    void anEmptyCartOffersNoPlaceOrder() {
+        assertThat(cartPage(null))
+                .doesNotContain("action=\"/cart/checkout\"")
+                .doesNotContain("Place order");
+    }
+
     private void add(Product product, int quantity) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("productId", String.valueOf(product.getId()));
