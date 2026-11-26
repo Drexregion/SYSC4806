@@ -2,6 +2,7 @@ package ca.carletonu.controllers;
 
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.readmodel.ShopSummaryBackfill;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ class ShopSearchControllerTests {
 
     @Autowired
     private ShopRepository shopRepository;
+
+    @Autowired
+    private ShopSummaryBackfill backfill;
 
     @BeforeEach
     void setUp() {
@@ -73,7 +77,13 @@ class ShopSearchControllerTests {
         assertThat(search("zangetsu")).contains("href=\"/shops/" + id + "\"");
     }
 
+    /**
+     * Search reads the catalogue, and these shops were written straight to the
+     * repository with no event behind them, so let the projection catch up
+     * first. The application does the same thing at startup.
+     */
     private String search(String term) {
+        backfill.backfill();
         return client.get().uri("/shops/search?q={q}", term)
                 .exchange()
                 .expectStatus().isOk()

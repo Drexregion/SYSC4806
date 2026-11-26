@@ -35,10 +35,10 @@
 
         <ul class="shop-grid" th:unless="${#lists.isEmpty(shops)}">
             <li class="shop-card" th:each="shop : ${shops}">
-                <h3><a th:href="@{/shops/{id}(id=${shop.id})}" th:text="${shop.name}">Shop name</a></h3>
+                <h3><a th:href="@{/shops/{id}(id=${shop.shopId})}" th:text="${shop.name}">Shop name</a></h3>
                 <p class="tag" th:if="${shop.type}" th:text="${shop.type}">Category</p>
                 <p th:text="${shop.description}">Description</p>
-                <p class="muted" th:text="${#lists.size(shop.products)} == 1 ? '1 product' : ${#lists.size(shop.products)} + ' products'">0 products</p>
+                <p class="muted" th:text="${shop.productCount} == 1 ? '1 product' : ${shop.productCount} + ' products'">0 products</p>
             </li>
         </ul>
     </section>

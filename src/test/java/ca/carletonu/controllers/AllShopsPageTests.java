@@ -3,6 +3,8 @@ package ca.carletonu.controllers;
 import ca.carletonu.models.Item;
 import ca.carletonu.models.Shop;
 import ca.carletonu.models.repositories.ShopRepository;
+import ca.carletonu.readmodel.ShopSummaryBackfill;
+import ca.carletonu.readmodel.ShopSummaryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +25,20 @@ class AllShopsPageTests {
     @Autowired
     private ShopRepository shopRepository;
 
+    @Autowired
+    private ShopSummaryRepository shopSummaryRepository;
+
+    @Autowired
+    private ShopSummaryBackfill backfill;
+
+    /**
+     * The catalogue is a separate table, so emptying the shops alone would
+     * leave their summaries behind and the page would still list them.
+     */
     @BeforeEach
-    void clearShops() {
+    void clearShopsAndCatalogue() {
         shopRepository.deleteAll();
+        shopSummaryRepository.deleteAll();
     }
 
     @Test
@@ -106,7 +119,14 @@ class AllShopsPageTests {
         assertThat(landing).contains("href=\"/shops\"");
     }
 
+    /**
+     * These tests write shops straight to the repository, which publishes no
+     * event, so the catalogue would not know about them. Backfilling first is
+     * what the application does at startup, and it is what lets a test assert
+     * on the page it just set up.
+     */
     private String getAllShopsPage() {
+        backfill.backfill();
         return client.get().uri("/shops")
                 .exchange()
                 .expectStatus().isOk()
